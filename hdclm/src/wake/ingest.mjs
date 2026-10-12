@@ -3,6 +3,7 @@ import { tokenize } from '../text/tokenizer.mjs';
 import { segment, buildUnit } from '../text/boundaries.mjs';
 
 export function ingest(mem, text, { mode = 'word', docName } = {}) {
+  mem.noteMode(mode);
   const toks = tokenize(text, mode).map((t) => ({ ...t, ref: mem.token(t.text) }));
   const tree = segment(toks);
   const hooks = {

@@ -7,7 +7,7 @@ const PUNCT = /^[^\p{L}\p{N}]$/u;
 
 export function generate(mem, cfg, text, { stopLevel = 3, maxTokens = 50, sample = false, rand = null } = {}) {
   const pred = new Predictor(mem, cfg);
-  const tokens = tokenize(text, 'word');
+  const tokens = tokenize(text, mem.tokenMode ?? 'word');
   const out = [];
   const closedAbove = (toks) => {
     const st = segmentPrefix(toks.map((t) => ({ ...t, ref: t.text })));

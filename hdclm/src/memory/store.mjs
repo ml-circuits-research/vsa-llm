@@ -116,6 +116,13 @@ export class Memory {
     const m = this.single[level];
     m.set(id, (m.get(id) ?? 0) + 1);
   }
+  // tokenizerul cu care a fost citită memoria; predicția și măsurătorile trebuie să-l folosească pe același
+  noteMode(mode) {
+    if (this.tokenMode === undefined) {
+      this._write('mode');
+      this.tokenMode = mode;
+    } else if (this.tokenMode !== mode) throw new Error(`memoria a fost citită cu tokenizerul ${this.tokenMode}, nu ${mode}`);
+  }
   noteRoot(id, docName) {
     this._write('root');
     this.roots.set(id, (this.roots.get(id) ?? 0) + 1);
@@ -379,6 +386,7 @@ export class Memory {
     m.childFreq = this.childFreq.map((x) => new Map(x));
     m.roots = new Map(this.roots);
     m.docsRead = this.docsRead.slice();
+    m.tokenMode = this.tokenMode;
     m.alternatives = new Map(this.alternatives);
     m._maxUnits = this._maxUnits;
     return m;

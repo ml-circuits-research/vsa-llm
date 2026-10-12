@@ -375,7 +375,7 @@ export class Predictor {
     return this.P(st, i);
   }
 
-  nextFromText(text, mode = 'word') {
+  nextFromText(text, mode = this.mem.tokenMode ?? 'word') {
     return this.nextToken(tokenize(text, mode));
   }
 

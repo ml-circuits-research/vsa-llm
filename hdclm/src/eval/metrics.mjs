@@ -9,7 +9,7 @@ export function predError(mem, cfg, docs) {
   const pred = new Predictor(mem, cfg);
   let bits = 0, n = 0;
   for (const d of docs) {
-    const toks = tokenize(d.text, 'word');
+    const toks = tokenize(d.text, mem.tokenMode ?? 'word');
     for (let i = 0; i <= toks.length; i++) {
       const dist = pred.nextToken(toks.slice(0, i));
       const p = pred.prob(dist, i < toks.length ? toks[i].text : EOT);

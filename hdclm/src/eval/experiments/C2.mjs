@@ -35,27 +35,55 @@ export function run({ seed = 1, base = {} } = {}) {
   const D = base.vecD ?? 4096;
   const S = makeStrategy(strategy, { D, seed });
   const view = new VectorView(VectorView.memorySource(m2), S, { seed, w: 0 });
-  // dicționarul de vectori: atomii care apar copii (tokeni și unități)
-  const book = [];
-  for (let id = 1; id < m2.atoms.length; id++) if (m2.isToken(id) || m2.isUnit(id)) book.push({ id, v: view.comp(id) });
+  // dicționarul pe niveluri: pentru o unitate de pe nivelul l, candidații sunt atomii care apar copii pe l.
+  // (Presupune că se știe nivelul unității decodate; vezi nota din rezultat.)
+  const L = S.name === 'phasor' ? 2 * D : D;
+  const books = new Map();
+  const bookFor = (l) => {
+    if (books.has(l)) return books.get(l);
+    const ids = [...m2.childFreq[l].keys()].sort((x, y) => x - y);
+    const mat = new Float32Array(ids.length * L);
+    ids.forEach((id, i) => mat.set(view.comp(id), i * L));
+    const bk = { ids, mat };
+    books.set(l, bk);
+    return bk;
+  };
+  const best = (q, bk) => {
+    let bi = -1, bs = -Infinity;
+    for (let i = 0, o = 0; i < bk.ids.length; i++, o += L) {
+      let t = 0;
+      for (let j = 0; j < L; j++) t += q[j] * bk.mat[o + j];
+      if (t > bs) { bs = t; bi = i; }
+    }
+    return { id: bk.ids[bi], sim: bs / Math.sqrt(q.reduce((x, y) => x + y * y, 0) || 1) };
+  };
   const theta = 0.1; // sub acest prag, poziția k nu mai are copil
-  const decode = (vec) => {
+  const decode = (u) => {
+    const vec = view.comp(u);
+    const bk = bookFor(m2.level(u));
     const out = [];
     for (let k = 1; k <= cfg.K; k++) {
-      const q = S.unembed(S.order(vec, -k));
-      const [best] = S.nearest(q, book, 1);
-      if (!best || best.sim < theta) break;
-      out.push(best.id);
+      const r = best(S.unembed(S.order(vec, -k)), bk);
+      if (r.sim < theta) break;
+      out.push(r.id);
     }
     return out;
   };
-  const exact = (id, depth) => {
-    if (m2.isToken(id)) return true;
-    const got = decode(view.comp(id));
-    const want = m2.children(id);
-    if (got.length !== want.length || !got.every((x, i) => x === want[i])) return false;
-    return depth <= 1 || want.every((c) => exact(c, depth - 1));
+  // fiecare atom se decodează o singură dată
+  const memo1 = new Map(), memoFull = new Map();
+  const oneLevel = (u) => {
+    if (!memo1.has(u)) {
+      const got = decode(u), want = m2.children(u);
+      memo1.set(u, got.length === want.length && got.every((x, i) => x === want[i]));
+    }
+    return memo1.get(u);
   };
+  const full = (u) => {
+    if (m2.isToken(u)) return true;
+    if (!memoFull.has(u)) memoFull.set(u, oneLevel(u) && m2.children(u).every(full));
+    return memoFull.get(u);
+  };
+  const book = { length: [1, 2, 3, 4, 5].reduce((t, l) => t + m2.childFreq[l].size, 0) };
   const R = rng(seed);
   const byLevel = {};
   const per = base.vecSample ?? 40;
@@ -67,8 +95,8 @@ export function run({ seed = 1, base = {} } = {}) {
     byLevel[l] = {
       units: units.length,
       sampled: sample.length,
-      oneLevel: sample.filter((u) => exact(u, 1)).length / sample.length,
-      full: sample.filter((u) => exact(u, 9)).length / sample.length,
+      oneLevel: sample.filter(oneLevel).length / sample.length,
+      full: sample.filter(full).length / sample.length,
     };
   }
   let upTo = 0;
@@ -80,7 +108,7 @@ export function run({ seed = 1, base = {} } = {}) {
     tokens: data.tokens,
     documents: docs.length,
     fromDefinitions: fromDefs,
-    vectors: { strategy, D, tokens: small.tokens, codebook: book.length, theta, byLevel },
+    vectors: { strategy, D, tokens: small.tokens, codebook: book.length, theta, byLevel, note: 'candidații: atomii care apar copii pe nivelul unității decodate (nivelul se presupune cunoscut)' },
     decision: `din definiții: ${(fromDefs * 100).toFixed(1)}% ${fromDefs === 1 ? '(trece)' : '(PICĂ)'}; doar din vectori (${strategy}, D=${D}, dicționar ${book.length}): refacere completă ≥ 99% până la nivelul ${upTo}`,
   });
 }
