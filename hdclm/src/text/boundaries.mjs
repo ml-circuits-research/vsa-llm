@@ -9,6 +9,19 @@
 export const SENTENCE_END = new Set(['.', '!', '?']);
 export const CLAUSE_END = new Set([',', ';', ':']);
 
+// Regula de formă extinsă (C3): GPT-2 lipește semnele vecine într-un token („."”, „!"”, „?"”).
+// Un token format numai din semne (fără litere, cifre) care conține [.!?] închide propoziția;
+// unul care conține [,;:] (și nu [.!?]) închide partea de propoziție. Ține de formă, nu de limbă.
+const PUNCT_ONLY = /^[^\p{L}\p{N}\s]+$/u;
+export function isSentenceEnd(text) {
+  const c = text.trim();
+  return PUNCT_ONLY.test(c) && /[.!?]/.test(c) && c === text.replace(/^ /, '');
+}
+export function isClauseEnd(text) {
+  const c = text.trim();
+  return PUNCT_ONLY.test(c) && /[,;:]/.test(c) && !/[.!?]/.test(c) && c === text.replace(/^ /, '');
+}
+
 const leaf = (tok) => ({ tok });
 
 export class Segmenter {
@@ -48,8 +61,8 @@ export class Segmenter {
     }
     if (t.newlineBefore && !/^\s/.test(t.text)) this.closeParagraph();
     else if (t.spaceBefore || t.newlineBefore) this.closeWord();
-    if (SENTENCE_END.has(t.text)) this.pending = t;
-    else if (CLAUSE_END.has(t.text)) this.closeClause(t);
+    if (isSentenceEnd(t.text)) this.pending = t;
+    else if (isClauseEnd(t.text)) this.closeClause(t);
     else this.word.push(leaf(t.ref));
   }
 

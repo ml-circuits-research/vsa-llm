@@ -148,3 +148,12 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
 - **Alte observații** (subagentul tokenizerului):
   - caracterele UTF-8 tăiate de BPE dau tokeni cu text gol, care se contopesc într-un singur atom; refacerea rămâne exactă;
   - identitatea tokenului este textul, nu id-ul GPT-2.
+
+## D13. Regula de formă extinsă: grupuri de semne care conțin [.!?] închid propoziția
+
+- **Context (C3).** GPT-2 lipește semnele vecine: `."`, `!"`, `?"`. Pe 100.000 de tokeni din TinyStories, 871 din 8.443 de sfârșituri de propoziție (10,4%) sunt astfel de grupuri. Regula literală din tabelul secțiunii 8 („după [.] [!] [?]”) nu le vede, deci propozițiile din dialog se lipesc de cele următoare.
+- **Ales.** Un token format numai din semne (fără litere, cifre sau spații în interior) care conține [.!?] închide propoziția; unul care conține [,;:] și nu [.!?] închide partea de propoziție. Regula „următorul token are spațiu în față” rămâne.
+- **Dovezi.** Cu extensia: 0,1% granițe probabil greșite (11, după abrevieri ca „Mr.”). Fără ea: 10,4%. Estimarea e automată, după formă; verificarea de mână a celor 500 de granițe din `runs/C3/granite.tsv` nu e făcută.
+- **De ce nu e cunoaștere de limbă.** Regula privește doar forma tokenului (semne, fără litere), la fel ca tabelul din secțiunea 8. Ghilimelele nu sunt numite nicăieri.
+- **Consecințe.** În modul tokeni-cuvânt nu se schimbă nimic (semnele sunt tokeni separați). Testele vechi trec neschimbate.
+- **Revizuire.** După verificarea de mână a eșantionului din C3 și pe corpusul tbsop, unde punctuația e mai variată.
