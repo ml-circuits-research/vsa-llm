@@ -1,6 +1,9 @@
 // Tokenizer. Modul tokeni-cuvânt: fiecare cuvânt și fiecare semn de punctuație este un token.
 // Pentru fiecare token: { text, spaceBefore, newlineBefore }. Spațiul nu face parte din text în acest mod.
-// Modul GPT-2 (pasul 7) nu este implementat încă.
+// Modul GPT-2: vezi gpt2.mjs (date în data/gpt2).
+
+import { fileURLToPath } from 'node:url';
+import { loadGpt2 } from './gpt2.mjs';
 
 const WORD = /[\p{L}\p{N}'’_-]+/uy;
 
@@ -32,7 +35,15 @@ export function wordDetokenize(texts) {
   return s;
 }
 
+// date imuabile, încărcate o singură dată (cache, nu stare de model)
+let gpt2Cache = null;
+function gpt2() {
+  gpt2Cache ??= loadGpt2(fileURLToPath(new URL('../../data/gpt2', import.meta.url)));
+  return gpt2Cache;
+}
+
 export function tokenize(text, mode = 'word') {
   if (mode === 'word') return wordTokenize(text);
+  if (mode === 'gpt2') return gpt2().encode(text);
   throw new Error(`modul de tokenizare ${mode} nu este implementat (pasul 7)`);
 }

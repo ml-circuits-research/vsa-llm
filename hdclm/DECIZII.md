@@ -138,3 +138,13 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
 - **Implicit rămâne `strategy: "exact"`.** Nu e o abatere de la rezultat: B5 arată că deciziile sunt identice, iar specificația cere ca strategia exactă să ruleze ca referință alături. Motivul e timpul (~12× mai lent cu vectori). Se trece pe bipolar ca implicit după optimizarea O7 (biți împachetați).
 - **Consecințe.** Fără O7 și fără un index, căutarea cu vectori nu scalează la text adevărat (21 s pe căutare la 1 milion de unități, 16 GB).
 - **Revizuire.** După O7; la blocul C, cu M real; dacă K = 64 se dovedește necesar pe text adevărat (experimentul C1).
+
+## D12. GPT-2: tokenul de rând nou închide paragraful și este ultimul lui copil
+
+- **Context.** Expresia regulată a GPT-2 face din „\n\n” două tokenuri „\n”. Cu regula „paragraful se închide înaintea unui token cu rând nou”, fiecare „\n” ar închide un paragraf și ar apărea paragrafe false, formate doar dintr-un „\n”.
+- **Ales.** Un token format numai din spații albe care conține un rând nou este închizătorul paragrafului (ultimul copil), cum este [.] pentru propoziție. Rândurile noi consecutive se adaugă tot la el, iar paragraful se închide la primul token care nu e spațiu alb.
+- **Consecințe.** Refacerea rămâne exactă. Același paragraf urmat de un rând nou sau de două este o unitate diferită.
+- **Legat de D2.** În GPT-2, spațiul face parte din token („ She” ≠ „She”), deci același cuvânt la început de propoziție și în mijloc sunt tokeni diferiți. Asta afectează locurile legate pe text adevărat; de urmărit în blocul D.
+- **Alte observații** (subagentul tokenizerului):
+  - caracterele UTF-8 tăiate de BPE dau tokeni cu text gol, care se contopesc într-un singur atom; refacerea rămâne exactă;
+  - identitatea tokenului este textul, nu id-ul GPT-2.

@@ -19,20 +19,35 @@ export class Segmenter {
     this.paragraph = [];
     this.doc = [];
     this.pending = null; // [.!?] care așteaptă tokenul următor
+    this.paraClosed = false; // paragraful are deja închizătorul (rând nou), dar nu s-a închis încă
   }
 
   clone() {
     const s = new Segmenter();
     for (const k of ['word', 'clause', 'sentence', 'paragraph', 'doc']) s[k] = this[k].slice();
     s.pending = this.pending;
+    s.paraClosed = this.paraClosed;
     return s;
   }
 
   push(t) {
     const spaced = t.spaceBefore || t.newlineBefore;
     if (this.pending) this.resolvePending(spaced);
-    if (t.newlineBefore) this.closeParagraph();
-    else if (t.spaceBefore) this.closeWord();
+    // GPT-2: un token numai din spații albe care conține un rând nou închide paragraful și este
+    // ultimul lui copil (ca [.] pentru propoziție). Rândurile noi consecutive se adaugă tot la el.
+    if (/^\s+$/.test(t.text) && t.text.includes('\n')) {
+      this.closeWord();
+      if (this.clause.length || this.sentence.length) this.closeSentence(null);
+      this.paragraph.push(leaf(t.ref));
+      this.paraClosed = true;
+      return;
+    }
+    if (this.paraClosed) {
+      this.paraClosed = false;
+      this.closeParagraph();
+    }
+    if (t.newlineBefore && !/^\s/.test(t.text)) this.closeParagraph();
+    else if (t.spaceBefore || t.newlineBefore) this.closeWord();
     if (SENTENCE_END.has(t.text)) this.pending = t;
     else if (CLAUSE_END.has(t.text)) this.closeClause(t);
     else this.word.push(leaf(t.ref));
@@ -70,8 +85,9 @@ export class Segmenter {
   closeParagraph() {
     this.closeWord();
     if (this.clause.length || this.sentence.length) this.closeSentence(null);
-    if (this.paragraph.length) this.doc.push({ level: 4, children: this.paragraph, closer: false });
+    if (this.paragraph.length) this.doc.push({ level: 4, children: this.paragraph, closer: !!this.paraClosed });
     this.paragraph = [];
+    this.paraClosed = false;
   }
   finish() {
     if (this.pending) this.resolvePending(true);
