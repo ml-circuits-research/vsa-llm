@@ -23,8 +23,12 @@ export function candMatrix(S, M, R) {
 export function fastNearest(q, mat, M, L) {
   let best = -1, bs = -Infinity;
   for (let i = 0, o = 0; i < M; i++, o += L) {
-    let s = 0;
-    for (let j = 0; j < L; j++) s += q[j] * mat[o + j];
+    let s0 = 0, s1 = 0, s2 = 0, s3 = 0; // 4 acumulatori (L multiplu de 4)
+    for (let j = 0; j < L; j += 4) {
+      s0 += q[j] * mat[o + j]; s1 += q[j + 1] * mat[o + j + 1];
+      s2 += q[j + 2] * mat[o + j + 2]; s3 += q[j + 3] * mat[o + j + 3];
+    }
+    const s = s0 + s1 + s2 + s3;
     if (s > bs) { bs = s; best = i; }
   }
   return best;

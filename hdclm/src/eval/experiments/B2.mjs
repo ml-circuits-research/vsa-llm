@@ -8,8 +8,8 @@ const NAMES = ['bipolar', 'phasor'];
 const DIMS = [1024, 4096, 16384];
 const NS = [2, 4, 8, 12, 16, 24, 32, 48, 64, 128, 256];
 const MS = [1000, 10000];
-const BUDGET = 6e8;       // elemente înmulțite per celulă (limitează timpul)
-const MIN_DEC = 60, MAX_DEC = 2000, PER_UNIT = 20; // decodări/celulă și pozițiile decodate/unitate
+const BUDGET = 8e8;       // elemente înmulțite per celulă (limitează timpul)
+const MIN_DEC = 20, MAX_DEC = 2000, PER_UNIT = 20; // decodări/celulă și pozițiile decodate/unitate
 
 export function run({ seed = 1, base = {} } = {}) {
   const dir = runDir('B2');
