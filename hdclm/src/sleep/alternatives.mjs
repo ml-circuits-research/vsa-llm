@@ -48,9 +48,8 @@ export function alternativePass(mem, cfg) {
       propose(ctx, [g], level);
       if (!ctx.proposals.size) continue;
       const judge = new Judge(ctx);
-      const A = new Set(judge.props.map((p) => p.pattern));
-      const { accepted } = judge.judgePackage(A);
-      if (!accepted.size) continue;
+      // nu se filtrează după estimarea judecății (în biți nu e exactă): decide totalul real, mai jos
+      const accepted = new Set(judge.props.map((p) => p.pattern));
       // câștigul real, pe forma exactă: o copie a memoriei, cu pachetul aplicat
       const pkg = judge.build(new Set(accepted));
       if (!pkg.rewrites.length) continue;

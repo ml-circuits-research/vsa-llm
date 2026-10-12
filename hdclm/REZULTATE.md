@@ -128,3 +128,17 @@ Rezultatul A1 de mai sus rulează mereu ambele măsuri (G1/G2 în tabel = măsur
 | biți | 2 tipare | 2 tipare, 2 alegeri, err 1,68 | 86,7% | 66,7% | 0 tipare |
 
 Niciun α nu le are pe amândouă: A5 scade înainte să apară tiparul cu două locuri pe G2. Pe G2, abstractizarea nu îmbunătățește predicția (1,67 față de 1,68), pentru că fiecare pereche verb–obiect apare la învățare. Câștigul ei s-ar vedea doar pe perechi verb–obiect nevăzute.
+
+## Etapa 1 din PLAN.md: testul care justifică biții (G2P)
+
+G2P = G2 fără perechile „writes the poem” și „reads the note” la învățare (pentru niciun nume); testul este pe aceste 20 de propoziții. `node src/cli.mjs experiment G2P`
+
+| | eroare pe perechi nevăzute | eroare pe învățare | tipare |
+| --- | --- | --- | --- |
+| fără somn | 2,064 | 1,624 | 0 |
+| termeni + alternative | **2,114** (mai rău decât fără somn) | 1,507 | 8 specifice (`[S, writes, the, story, .]` …) |
+| biți + alternative | **1,871** | 1,531 | 2: `[S, writes, the, S, .]`, `[S, reads, the, S, .]`, alegerea „obiect” cu toate 5 |
+
+Concluzie: termenii învață că perechile nevăzute nu există. Biții creează categoria „obiect” și generalizează (−0,24 biți/token), cu un cost mic pe ce s-a văzut (+0,02). **Decizia „biți” este susținută de date.**
+
+Corectură în trecerea de alternative: candidații nu se mai filtrează după estimarea judecății, ci se verifică toți pe forma exactă. Pe G2P estimarea în biți îi elimina pe toți, inclusiv pe cel bun.

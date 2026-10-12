@@ -112,11 +112,24 @@ function g9(opts, R) {
   return mk('G9', docs);
 }
 
+// G2P: G2 în care perechi verb–obiect întregi lipsesc la învățare (pentru orice nume).
+// Verifică dacă sistemul generalizează la o pereche pe care n-a văzut-o niciodată.
+const G2P_HELD = [['writes', 'poem'], ['reads', 'note']];
+function g2p() {
+  const docs = [];
+  NAMES.forEach((n) => VERBS.forEach((v) => OBJECTS5.forEach((o) => {
+    const held = G2P_HELD.some(([hv, ho]) => hv === v && ho === o);
+    docs.push({ text: `${n} ${v} the ${o}.`, heldout: held, meta: { name: n, verb: v, object: o, prompt: `${n} ${v} the`, answer: o } });
+  })));
+  return mk('G2P', docs, { heldPairs: G2P_HELD });
+}
+
 export function generateSet(name, seed = 1, opts = {}) {
   const R = rng(seed);
   switch (name) {
     case 'G1': return g1(opts);
     case 'G2': return g2like('G2', opts, null);
+    case 'G2P': return g2p();
     case 'G3': return g3();
     case 'G4': return g4(R);
     case 'G5': return g2like('G5', opts, R);
