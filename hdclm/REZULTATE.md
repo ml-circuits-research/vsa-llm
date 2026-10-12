@@ -218,3 +218,18 @@ Regulile găsite, citite din memorie:
 - **B5** (225 s): bipolar și phasor la D = 4096 dau **aceleași decizii și aceleași totaluri** ca strategia exactă pe A1, A3, A5, A6, G2P (de exemplu, A6: 1236,385 la toate trei). Sunt de ~12× (bipolar) și ~24× (phasor) mai lente.
 - **Decizia (DECIZII.md, D11):** bipolar, D = 4096, θ_group = 0,17. Implicit rămâne strategia exactă până la optimizarea O7.
 - Corectură: B2 folosea `node:child_process`, care nu este permis de specificație (secțiunea 4). A fost trecut pe `node:worker_threads`, cu rezultat determinist.
+
+## bAbI, sarcina 1: formalizare (`node src/cli.mjs experiment BABI1`)
+
+200 de povești la învățare, 1000 de întrebări de test, tokeni-cuvânt, configurarea implicită; somnul durează 23 s.
+
+- **Categorii descoperite singure, toate exacte:**
+  - {bathroom, hallway, garden, office, bedroom, kitchen} = locuri;
+  - {Mary, John, Daniel, Sandra} = persoane;
+  - **{moved, went, journeyed, travelled} = verbele de mișcare, 4 din 4, fără niciun intrus.**
+  
+  Categoria verbelor vine din tiparul `[S1, S2, to, the, office, .]`, în care verbul este un loc liber.
+- **Ce lipsește pentru „același sens = aceeași ecuație”:**
+  - rămân și tiparele câte unul pe verb (`[S, moved, to, the, S, .]` …); nu există o formă canonică unică;
+  - „went back to” are un token în plus și rămâne un tipar separat (deplasarea).
+- **Răspunsuri corecte:** 22,5% fără somn, 22,9% după somn (la întâmplare ~17%). Sarcina cere „ultimul fapt despre X”, ceea ce regulile cu poziții fixe nu pot exprima (aceeași limită ca la A7 și G11).
