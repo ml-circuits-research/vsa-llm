@@ -281,7 +281,7 @@ export class Memory {
   //   pkg.rewrites:    [{ unit, pattern, fills }]
   //   pkg.reverts:     [unit]       aplicări care redevin înșiruiri
   //   pkg.seen:        { nivel: [unități văzute de trecere] }
-  commit(pkg) {
+  commit(pkg, { check = true } = {}) {
     this.frozen = false;
     const touched = new Set([...(pkg.rewrites ?? []).map((r) => r.unit), ...(pkg.reverts ?? [])]);
     const before = new Map();
@@ -350,7 +350,8 @@ export class Memory {
     for (const [u, alts] of pkg.alternatives ?? []) this.alternatives.set(u, alts);
     // 5. versiunea și invarianții
     this.version++;
-    checkInvariants(this, { before });
+    // pe copiile de măsurare (judecata exactă) verificarea se sare: commit-ul real o face oricum
+    if (check) checkInvariants(this, { before });
     return map;
   }
 

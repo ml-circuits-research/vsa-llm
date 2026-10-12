@@ -30,7 +30,27 @@ export function sleepPass(mem, cfg, opts = {}) {
     accepted = res.accepted;
     validation = res.info;
   }
-  const pkg = judge.build(accepted);
+  // verificarea exactă (D5): estimarea judecății nu vede efectele globale ale măsurii în biți.
+  // Pachetul se aplică pe o copie; dacă totalul real crește, iese propunerea cu cel mai mic câștig.
+  let pkg = judge.build(accepted);
+  let exactChecks = 0, removed = 0;
+  for (;;) {
+    if (!pkg.rewrites.length) break;
+    const m = mem.clone();
+    m.frozen = true;
+    m.commit(pkg, { check: false });
+    exactChecks++;
+    if (total(m, measure) <= before + 1e-9) break;
+    let worst = null, wg = Infinity;
+    for (const p of judge.props) {
+      if (!accepted.has(p.pattern)) continue;
+      const g = judge.gain(p.pattern, accepted);
+      if (g < wg - 1e-9) [wg, worst] = [g, p.pattern];
+    }
+    for (const x of judge.closure(worst, accepted)) accepted.delete(x);
+    removed++;
+    pkg = judge.build(accepted);
+  }
   mem.commit(pkg);
   const after = total(mem, measure);
   if (after > before + 1e-9) fail('I8', `totalul a crescut: ${before} -> ${after}`);
@@ -44,6 +64,8 @@ export function sleepPass(mem, cfg, opts = {}) {
     rewrites: pkg.rewrites.length,
     trace,
     validation,
+    exactChecks,
+    removedByExactCheck: removed,
   };
 }
 
@@ -52,7 +74,7 @@ function validateSplit(mem, judge, accepted, validate) {
   const errOf = (A) => {
     const m = mem.clone();
     m.frozen = true;
-    m.commit(judge.build(new Set(A)));
+    m.commit(judge.build(new Set(A)), { check: false });
     return validate(m);
   };
   const base = validate(mem);

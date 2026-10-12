@@ -157,3 +157,10 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
 - **De ce nu e cunoaștere de limbă.** Regula privește doar forma tokenului (semne, fără litere), la fel ca tabelul din secțiunea 8. Ghilimelele nu sunt numite nicăieri.
 - **Consecințe.** În modul tokeni-cuvânt nu se schimbă nimic (semnele sunt tokeni separați). Testele vechi trec neschimbate.
 - **Revizuire.** După verificarea de mână a eșantionului din C3 și pe corpusul tbsop, unde punctuația e mai variată.
+
+## D14. Verificarea exactă a pachetului și în trecerile obișnuite
+
+- **Context.** La 10k tokeni de TinyStories, o trecere obișnuită de somn a crescut totalul în biți (99537,64 → 99537,85). Invariantul I8 a oprit-o. Cauza e cea din D5: estimarea judecății ignoră efectele globale ale măsurii în biți. Pe seturile G nu apăruse.
+- **Ales.** Înainte de commit, pachetul se aplică pe o copie și se măsoară totalul real. Dacă totalul crește, iese propunerea cu cel mai mic câștig estimat (cu tot ce depinde de ea) și se reîncearcă. Pe copiile de măsurare nu se verifică invarianții; commit-ul real îi verifică.
+- **Consecințe.** O copie a memoriei în plus la fiecare trecere (cost liniar). Rezultatele de pe seturile G sunt identice octet cu octet, iar setul de referință e mai rapid: 22,4 → 18,6 s, pentru că invarianții nu se mai verifică pe copii.
+- **Revizuire.** Când există contabilitatea incrementală (O6), copia se înlocuiește cu un calcul pe regiune.

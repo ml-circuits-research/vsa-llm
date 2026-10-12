@@ -55,7 +55,7 @@ export function alternativePass(mem, cfg) {
       if (!pkg.rewrites.length) continue;
       const m = mem.clone();
       m.frozen = true;
-      m.commit(pkg);
+      m.commit(pkg, { check: false });
       // cu privire înainte: o trecere obișnuită pe copie arată ce se mai formează deasupra
       if (cfg.altLookahead) sleepPass(m, cfg);
       const gain = before - total(m, measure);
