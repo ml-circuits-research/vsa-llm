@@ -1,0 +1,12 @@
+{
+  "name": "hdclm",
+  "version": "0.1.0",
+  "description": "Model de limbaj HDC din text (implementarea specificației v1.0)",
+  "type": "module",
+  "private": true,
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "test": "node --test test/",
+    "experiment": "node src/cli.mjs experiment"
+  }
+}
