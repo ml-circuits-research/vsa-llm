@@ -95,4 +95,6 @@ Profilul după acești pași (A7 + G10, 21 s): **68% din timp e verificarea pe t
 | 3.108 | 0,09 s | 37,9 s | 8,331 → 8,345 (fără validare); 8,315 (complet) |
 | 10.143 | 0,71 s | (oprit după 3,5 min, ca să fie reluat cu codul nou) | 7,812 → 7,846 (fără validare) |
 
+| tăierea incrementală la predicția pe documente (aceleași stive, nodurile închise memorate) | identic octet cu octet; somnul complet pe 3k: 15,8 → 11,8 s |
+
 **Pe text adevărat, somnul fără validare înrăutățește puțin predicția.** Asta e o constatare de mecanism (blocurile D și E), nu de viteză.

@@ -2,7 +2,7 @@
 import { ExactSim } from '../memory/similarity.mjs';
 import { makeSim } from '../memory/vectors.mjs';
 import { matchPattern, bestMatch } from '../memory/match.mjs';
-import { segmentPrefix, buildUnit } from '../text/boundaries.mjs';
+import { segmentPrefix, buildUnit, Segmenter } from '../text/boundaries.mjs';
 import { tokenize } from '../text/tokenizer.mjs';
 import { byScoreThenId } from '../core/rng.mjs';
 import { LEVELS } from '../memory/store.mjs';
@@ -430,8 +430,38 @@ export class Predictor {
 
   stackFor(tokens) {
     const st = segmentPrefix(tokens.map((t) => ({ ...t, ref: this.temp.token(t.text) })));
+    return this.stackFromOpen(st);
+  }
+  stackFromOpen(st) {
     const hooks = { unit: (its, lv) => this.temp.make(its, lv) };
-    return st.map((e) => ({ ...e, prefix: e.items.map((node) => buildUnit(node, hooks, this.mem.K)) }));
+    // nodurile închise rămân aceleași obiecte de la un pas la altul: id-ul lor se ține minte
+    this.nodeIds ??= new WeakMap();
+    const idOf = (node) => {
+      if (node.tok !== undefined) return node.tok;
+      let id = this.nodeIds.get(node);
+      if (id === undefined) this.nodeIds.set(node, (id = buildUnit(node, hooks, this.mem.K)));
+      return id;
+    };
+    return st.map((e) => ({ ...e, prefix: e.items.map(idOf) }));
+  }
+  // probabilitățile fiecărui token al unui document (și ale sfârșitului de text), cu tăierea incrementală:
+  // aceleași stive ca segmentPrefix pe fiecare prefix, fără a reface tăierea de la început
+  docProbs(tokens) {
+    const seg = new Segmenter();
+    const out = [];
+    for (let i = 0; i <= tokens.length; i++) {
+      const snap = seg.clone();
+      if (snap.pending) snap.resolvePending(true);
+      const st = this.stackFromOpen(snap.openStack());
+      let k = st.findIndex((e) => e.prefix.length > 0);
+      if (k < 0) k = st.length - 1;
+      const lz = this.Plazy(st, k);
+      const text = i < tokens.length ? tokens[i].text : EOT;
+      const id = text === EOT ? EOT : this.mem.tokenId(text);
+      out.push(this.lazyGet(lz, id === undefined ? UNK : id));
+      if (i < tokens.length) seg.push({ ...tokens[i], ref: this.temp.token(tokens[i].text) });
+    }
+    return out;
   }
 
   // tokens: [{ text, spaceBefore, newlineBefore }]; întoarce Map(token id | UNK | EOT -> probabilitate)
