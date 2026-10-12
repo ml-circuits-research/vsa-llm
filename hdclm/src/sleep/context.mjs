@@ -10,6 +10,8 @@ export class PassContext {
     this.nextRef = -1;
     this.choices = new Map(); // ref negativ -> { ref, level, current: Map(valoare -> pondere) }
     this.patterns = new Map(); // ref negativ -> { ref, level, items, slots, structs: [{tmp, accepts}] }
+    this.classes = new Map(); // ref negativ -> { type: 'PCLASS', ref, level, members, roles, align }
+    this.classAdds = new Map(); // clasă din memorie -> Map(membru nou -> aliniere)
     this.structs = new Map(); // ref negativ -> accepts
     this.proposals = new Map(); // ref tipar -> { pattern, isNew, level, units: Map(u -> fills), deps: Set, order }
     this.rewriteOf = new Map(); // unitate -> ref tipar
@@ -29,7 +31,14 @@ export class PassContext {
     return this.nextRef--;
   }
   pattern(pid) {
-    return pid < 0 ? this.patterns.get(pid) : this.mem.atoms[pid].def;
+    if (pid < 0) return this.patterns.get(pid) ?? this.classes.get(pid);
+    const d = this.mem.atoms[pid].def;
+    const add = d.type === 'PCLASS' ? this.classAdds.get(pid) : null;
+    if (!add) return d;
+    // clasa din memorie, cu membrii adăugați în această trecere
+    const align = { ...d.align };
+    for (const [m, al] of add) align[m] = al;
+    return { ...d, members: [...d.members, ...add.keys()], align };
   }
   accepts(s) {
     return s < 0 ? this.structs.get(s) : this.mem.atoms[s].accepts;
@@ -68,6 +77,7 @@ export class PassContext {
       similar: (c, v) => this.similar(c, v),
       interp: (v) => this.interp(v),
       children: (v) => this.mem.children(v),
+      choiceMembers: (c) => this.memberList(c),
       multiInterp: !!this.cfg.multiInterp,
       thetaAccept: this.cfg.theta_accept,
     };
@@ -124,7 +134,13 @@ export function slotValues(ctx, pid, fills) {
   for (const it of pat.items)
     if (it.sub !== undefined) {
       const q = ctx.pattern(it.sub);
-      it.args.forEach((a, j) => out.push([ctx.accepts(q.slots[j]), bind.get(a)]));
+      if (q.type === 'PCLASS') {
+        // rolurile clasei și locurile membrului ales
+        it.args.forEach((a, j) => out.push([ctx.accepts(q.roles[j]), bind.get(a)]));
+        const member = bind.get(it.form);
+        const md = ctx.pattern(member);
+        md.slots.forEach((s, k) => out.push([ctx.accepts(s), bind.get(it.args[q.align[member][k]])]));
+      } else it.args.forEach((a, j) => out.push([ctx.accepts(q.slots[j]), bind.get(a)]));
     }
   return out;
 }

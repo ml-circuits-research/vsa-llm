@@ -164,3 +164,32 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
 - **Ales.** Înainte de commit, pachetul se aplică pe o copie și se măsoară totalul real. Dacă totalul crește, iese propunerea cu cel mai mic câștig estimat (cu tot ce depinde de ea) și se reîncearcă. Pe copiile de măsurare nu se verifică invarianții; commit-ul real îi verifică.
 - **Consecințe.** O copie a memoriei în plus la fiecare trecere (cost liniar). Rezultatele de pe seturile G sunt identice octet cu octet, iar setul de referință e mai rapid: 22,4 → 18,6 s, pentru că invarianții nu se mai verifică pe copii.
 - **Revizuire.** Când există contabilitatea incrementală (O6), copia se înlocuiește cu un calcul pe regiune.
+
+## D15. Clase de tipare cu roluri comune (schimbarea lui I5), cu forma ca loc separat
+
+- **Context.** Ținta inițială: trecerea de la atomi poziționali și de tokenizare la atomi de structură semantică și de sens. Măsurat (FORMAL, E0): pe GPARA doar 2% din reformulări aveau aceeași ecuație. Fiecare formă („moved”, „went”, „went back”, „travelled”) avea tiparul ei, cu locuri proprii, iar redundanța era de 3,3 atomi de structură pe rol. Regulile se fragmentau pe forme.
+- **Ales (aprobat de autor, inclusiv schimbarea lui I5).**
+  - Un nou fel de definiție, `PCLASS`: membri (tipare), roluri comune (atomi de structură ai clasei, `STRUCT.pclass`) și alinierea locurilor fiecărui membru la roluri.
+  - Un tipar poate cuibări o clasă: `{ sub: M, args: roluri, form: loc }`. Locul `form` reține membrul folosit și acceptă o alegere de tipare.
+  - **I5 devine:** un loc aparține unui singur tipar, *sau* este rolul unei clase, comun membrilor ei.
+- **Cum se descoperă (dovadă funcțională).** Când o regulă ridică o coloană în care valorile sunt aplicări ale unor tipare diferite, acestea intră într-o clasă numai dacă:
+  1. au același număr de locuri și, pe fiecare loc, **valorile primite efectiv** se suprapun (≥ θ_merge);
+  2. cuvintele prin care diferă **nu se repetă sistematic** (în ≥ θ_merge din rânduri) în restul unității. O repetiție sistematică, cum e obiectul din fapt repetat în întrebare, arată conținut, nu formă.
+- **Ce s-a încercat și a picat.**
+  - Compatibilitatea prin alegerea acceptată: o alegere poluată (locuri + obiecte) a unit MOVE cu HAVE.
+  - Fără criteriul repetiției: A5 a scăzut la 93,3% (s-au unit tipare ca „has the book” cu „has the pen”).
+  - Criteriul repetiției în orice rând: GPARA a scăzut la 41%, din cauza repetițiilor întâmplătoare.
+  - Ordinea „grupurile mari întâi”: generalizează prea mult (reformulări 0%, A1/G1 pică).
+- **Corectură legată, generală.** O alegere nouă care face punte între două alegeri disjuncte nu se mai contopește cu niciuna.
+- **Recomandarea analizei Fable, urmată parțial.** Analiza recomanda atomi de structură *nu globali*, ci comuni în interiorul unei clase de tipare înrudite (P3), ca să nu se amestece rolurile la `unbind`. Asta s-a făcut. Atomi de structură globali nu s-au introdus.
+- **Revizuire.**
+  - HAVE nu își formează clasa pe GPARA: regulile mici, ultra-specifice, consumă poveștile înaintea regulii generale.
+  - BABI2 nu se îmbunătățește: tiparele principale sunt „pe loc”, cu verbul ca loc liber.
+  - De revăzut odată cu ordinea grupării și cu D4 (deplasarea).
+
+## D16. Gruparea abstractă după nivelul copiilor, nu după lungimea lor (`abstractShape: "level"`)
+
+- **Context.** Cheia grupării abstracte conținea numărul de copii ai fiecărei propoziții. Povești cu propoziții de lungimi diferite (de exemplu distractorii din G9) nu intrau în același grup, iar regulile se fragmentau.
+- **Ales.** Cheia folosește doar nivelul copilului; diferențele de lungime se rezolvă la ridicare (tipar comun, interpretări multiple sau clasă).
+- **Dovezi.** Pe sămânța 1, schimbarea singură: A5 100%, A6 100%, G10 100%, iar **A7 trece până la 5 propoziții între fapt și întrebare** (înainte: 1). Împreună cu clasele (D15), A7 dă 1 / 2 / 5 pe semințele 1–3: clasele anulează câștigul pe sămânța 1. Cauza nu e încă înțeleasă.
+- **Consecințe.** Grupuri mai eterogene; coloanele care nu se pot ridica devin locuri simple, iar judecata decide.

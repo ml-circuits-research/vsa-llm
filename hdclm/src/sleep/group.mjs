@@ -35,9 +35,14 @@ function slotsAfter(ctx, units, F) {
   };
   for (const f of F) {
     const col = units.map((u) => ctx.mem.children(u)[f]);
-    const lift = ctx.cfg.d_max >= 1 ? findLift(ctx, col, { probe: true }) : null;
+    const rowOthers = ctx.cfg.patternClasses ? units.map((u) => new Set(ctx.mem.children(u).flatMap((x, k) => (k === f ? [] : ctx.mem.unfold(x))))) : null;
+    const lift = ctx.cfg.d_max >= 1 ? findLift(ctx, col, { probe: true, rowOthers }) : null;
     if (lift?.probe) for (let k = 0; k < lift.probe; k++) add(col.map((v) => `${v}#${k}`)); // tipar care s-ar crea
-    else if (lift) ctx.pattern(lift.q).slots.forEach((_, j) => add(lift.fills.map((f) => f[j])));
+    else if (lift?.cls) {
+      const k = lift.q === null ? lift.k : ctx.pattern(lift.q).roles.length;
+      for (let j = 0; j < k; j++) add(lift.fills.map((f) => f[j]));
+      add(lift.form);
+    } else if (lift) ctx.pattern(lift.q).slots.forEach((_, j) => add(lift.fills.map((f) => f[j])));
     else add(col);
   }
   return cols.length;
@@ -63,7 +68,7 @@ export function candidateGroups(ctx, units, level) {
     // gruparea abstractă: copii care sunt aplicări ale acelorași tipare (valorile pot diferi peste tot)
     if (cfg.abstractGroups) {
       // forma copiilor: o unitate contează prin nivelul și lungimea ei, un token prin el însuși
-      const sig = ch.map((c) => (mem.isUnit(c) ? `u${mem.level(c)}:${mem.children(c).length}` : `a${c}`));
+      const sig = ch.map((c) => (mem.isUnit(c) ? (cfg.abstractShape === 'level' ? `u${mem.level(c)}` : `u${mem.level(c)}:${mem.children(c).length}`) : `a${c}`));
       if (sig.some((x) => x[0] === 'u')) {
         // structura repetițiilor: care valori (ale locurilor copiilor, sau copiii-token) se repetă, și unde.
         // Unități cu aceeași formă dar cu alte legături nu intră în același grup.
@@ -92,7 +97,15 @@ export function candidateGroups(ctx, units, level) {
   }
   const cand = [...buckets.values()].filter((g) => g.F.length > 0 && valid(mem, g.units, g.F, cfg.m_min));
   for (const g of cand) g.slots = slotsAfter(ctx, g.units, g.F);
-  cand.sort((a, b) => a.F.length - b.F.length || b.units.length - a.units.length || a.slots - b.slots || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  // ordinea de luare: specificația cere întâi grupurile cu mai puține poziții libere, apoi cele mai mari
+  // (groupOrder 'free'); varianta 'size' ia întâi grupurile mai mari (mai generale), apoi pe cele cu mai puține
+  // poziții libere
+  const bySize = cfg.groupOrder === 'size';
+  cand.sort((a, b) =>
+    (bySize ? b.units.length - a.units.length || a.F.length - b.F.length : a.F.length - b.F.length || b.units.length - a.units.length) ||
+    a.slots - b.slots ||
+    (a.key < b.key ? -1 : a.key > b.key ? 1 : 0),
+  );
   return cand;
 }
 

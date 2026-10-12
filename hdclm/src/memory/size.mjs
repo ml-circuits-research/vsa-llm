@@ -45,15 +45,17 @@ export function defSize(view, id, measure = 'terms', bctx = null) {
     switch (d.type) {
       case 'SEQ': return d.items.length;
       case 'CHOICE': return d.members.size;
-      case 'PATTERN': return d.items.length + d.items.reduce((s, it) => s + (it.args ? it.args.length : 0), 0);
+      case 'PATTERN': return d.items.length + d.items.reduce((s, it) => s + (it.args ? it.args.length : 0) + (it.form !== undefined ? 1 : 0), 0);
       case 'APP': return 1 + d.fills.length;
+      case 'PCLASS': return d.members.length + d.roles.length;
     }
   } else {
     const v = lg(bctx.V);
     switch (d.type) {
       case 'SEQ': return d.items.length * v;
       case 'CHOICE': return d.members.size * v;
-      case 'PATTERN': return d.items.reduce((s, it) => s + (it.sub !== undefined ? lg(bctx.P) + it.args.length * v : v), 0);
+      case 'PATTERN': return d.items.reduce((s, it) => s + (it.sub !== undefined ? lg(bctx.P) + (it.args.length + (it.form !== undefined ? 1 : 0)) * v : v), 0);
+      case 'PCLASS': return (d.members.length + d.roles.length) * v;
       case 'APP': {
         const p = view.pattern(d.pattern);
         let s = lg(bctx.P);

@@ -3,6 +3,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { rng } from '../core/rng.mjs';
 import { g11 } from './g11.mjs';
+import { gpara } from './gpara.mjs';
+import { babi2Set } from './babi.mjs';
 
 export const NAMES = ['Ana', 'Maria', 'Ion', 'Elena', 'Mihai', 'Radu', 'Ioana', 'Dan', 'Paul', 'Vlad'];
 const VERBS = ['reads', 'writes'];
@@ -162,6 +164,8 @@ export function generateSet(name, seed = 1, opts = {}) {
     case 'G9': return g9(opts, R);
     case 'G10': return g10(R);
     case 'G11': return g11(R);
+    case 'GPARA': return gpara(R);
+    case 'BABI2': return babi2Set(seed);
     default: throw new Error(`set necunoscut ${name}`);
   }
 }

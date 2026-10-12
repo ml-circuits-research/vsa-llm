@@ -22,11 +22,14 @@
   "maxDeepPasses": 20,
   "packageJudge": true,
   "validate": true,
+  "validateMode": "all",
   "bindSlots": true,
   "freeze": true,
   "alternatives": true,
   "altCandidates": 200,
   "altLookahead": false,
   "multiInterp": true,
-  "abstractGroups": true
+  "abstractGroups": true,
+  "patternClasses": true,
+  "abstractShape": "level"
 }

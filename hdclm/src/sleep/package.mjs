@@ -83,7 +83,10 @@ export class Judge {
       }
       for (const c of this.contrib.get(pid).keys()) choices.add(c);
     }
-    return { units, choices, patterns: [...R].filter((pid) => this.byPid.get(pid).isNew), old: [...old] };
+    // clasele de tipare cuibărite de tiparele din R (noi sau din memorie cu membri adăugați)
+    const classes = new Set();
+    for (const pid of R) for (const it of this.ctx.pattern(pid).items) if (it.sub !== undefined && this.ctx.pattern(it.sub).type === 'PCLASS') classes.add(it.sub);
+    return { units, choices, patterns: [...R].filter((pid) => this.byPid.get(pid).isNew), old: [...old], classes: [...classes] };
   }
 
   // aplicările unui tipar din memorie, după ce propunerile din A își iau unitățile
@@ -104,6 +107,7 @@ export class Judge {
     for (const u of reg.units) t += defSize(v, u, measure, this.bctx);
     for (const pid of reg.patterns) if (A.has(pid)) t += this.patternSize(pid, measure);
     for (const p of reg.old) if (this.liveUsage(p, A) > 0) t += this.patternSize(p, measure);
+    for (const c of reg.classes ?? []) if (this.classUsed(c, A)) t += this.classSize(c, measure);
     for (const c of reg.choices) {
       const ms = v.members(c);
       const users = c > 0 ? this.mem.choiceUsers().get(c) ?? [] : [];
@@ -113,11 +117,23 @@ export class Judge {
     return t;
   }
 
+  // o clasă nouă costă dacă o folosește un tipar acceptat; una din memorie costă doar membrii adăugați
+  classUsed(c, A) {
+    for (const pid of A) for (const it of this.ctx.pattern(pid).items) if (it.sub === c) return true;
+    return false;
+  }
+  classSize(c, measure = this.measure) {
+    const d = this.ctx.pattern(c);
+    const n = c < 0 ? d.members.length + d.roles.length : this.ctx.classAdds.get(c)?.size ?? 0;
+    return measure === 'terms' ? n : n * Math.log2(Math.max(2, this.bctx.V));
+  }
+
   patternSize(pid, measure = this.measure) {
     const d = this.ctx.pattern(pid);
-    if (measure === 'terms') return d.items.length + d.items.reduce((s, it) => s + (it.args ? it.args.length : 0), 0);
+    const extra = (it) => (it.args ? it.args.length : 0) + (it.form !== undefined ? 1 : 0);
+    if (measure === 'terms') return d.items.length + d.items.reduce((s, it) => s + extra(it), 0);
     const lg = (n) => Math.log2(Math.max(2, n));
-    return d.items.reduce((s, it) => s + (it.sub !== undefined ? lg(this.bctx.P) + it.args.length * lg(this.bctx.V) : lg(this.bctx.V)), 0);
+    return d.items.reduce((s, it) => s + (it.sub !== undefined ? lg(this.bctx.P) + extra(it) * lg(this.bctx.V) : lg(this.bctx.V)), 0);
   }
 
   gain(pid, A) {
@@ -197,6 +213,17 @@ export class Judge {
     }
     // tiparele noi în ordinea în care se cuibăresc: un tipar după cele pe care le folosește
     pkg.newPatterns.sort((a, b) => b.tmp - a.tmp);
+    // clasele de tipare folosite de tiparele acceptate
+    pkg.newClasses = [];
+    pkg.classAdds = [];
+    const used = new Set();
+    for (const p of this.props) if (A.has(p.pattern)) for (const it of ctx.pattern(p.pattern).items) if (it.sub !== undefined && ctx.pattern(it.sub).type === 'PCLASS') used.add(it.sub);
+    for (const c of [...used].sort((a, b) => b - a)) {
+      const d = ctx.pattern(c);
+      if (c < 0)
+        pkg.newClasses.push({ tmp: c, level: d.level, members: d.members.slice(), roles: d.roles.map((r) => ({ tmp: r, accepts: ctx.structs.get(r) })), align: Object.entries(d.align).map(([m, al]) => [Number(m), al]) });
+      else if (ctx.classAdds.has(c)) pkg.classAdds.push({ cls: c, align: [...ctx.classAdds.get(c)].map(([m, al]) => [m, al]) });
+    }
     return pkg;
   }
 }

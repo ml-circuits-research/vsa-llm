@@ -49,8 +49,27 @@ export function checkInvariants(mem, { before = null } = {}) {
         if (!st || st.kind !== 'STRUCT' || st.pattern !== id) fail('I5', `locul ${s} nu aparține tiparului ${id}`);
       }
       for (const it of d.items) {
-        const used = it.slot !== undefined ? [it.slot] : it.args ?? [];
+        const used = it.slot !== undefined ? [it.slot] : [...(it.args ?? []), ...(it.form !== undefined ? [it.form] : [])];
         for (const s of used) if (!d.slots.includes(s)) fail('I5', `tiparul ${id} folosește locul ${s} nedeclarat`);
+        if (it.sub !== undefined) {
+          const q = mem.atoms[it.sub]?.def;
+          const need = q?.type === 'PCLASS' ? q.roles.length : q?.slots?.length;
+          if (need !== it.args.length) fail('I5', `tiparul ${id}: ${it.args.length} argumente pentru ${need}`);
+          if (q?.type === 'PCLASS' && it.form === undefined) fail('I5', `tiparul ${id}: clasa ${it.sub} fără locul formei`);
+        }
+      }
+    } else if (d.type === 'PCLASS') {
+      // I5 (D15): rolurile aparțin clasei și sunt comune membrilor; fiecare membru e un tipar, aliniat la roluri
+      for (const r of d.roles) {
+        const st = mem.atoms[r];
+        if (!st || st.kind !== 'STRUCT' || st.pclass !== id) fail('I5', `rolul ${r} nu aparține clasei ${id}`);
+      }
+      if (d.members.length < 1) fail('I4', `clasa ${id} nu are membri`);
+      for (const m of d.members) {
+        const md = mem.atoms[m]?.def;
+        if (md?.type !== 'PATTERN') fail('I5', `membrul ${m} al clasei ${id} nu este tipar`);
+        const al = d.align[m];
+        if (!al || al.length !== md.slots.length || al.some((r) => r < 0 || r >= d.roles.length)) fail('I5', `alinierea membrului ${m} în clasa ${id} este greșită`);
       }
     }
   }

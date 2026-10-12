@@ -233,3 +233,37 @@ Regulile găsite, citite din memorie:
   - rămân și tiparele câte unul pe verb (`[S, moved, to, the, S, .]` …); nu există o formă canonică unică;
   - „went back to” are un token în plus și rămâne un tipar separat (deplasarea).
 - **Răspunsuri corecte:** 22,5% fără somn, 22,9% după somn (la întâmplare ~17%). Sarcina cere „ultimul fapt despre X”, ceea ce regulile cu poziții fixe nu pot exprima (aceeași limită ca la A7 și G11).
+
+## Revenirea la ținta inițială: atomi de structură și de sens (D15, D16)
+
+**Măsura nouă** (`src/eval/formal.mjs`, experimentul `FORMAL`, setul `GPARA`):
+- acoperirea cu tipare;
+- atomii de structură raportați la rolurile distincte (redundanța);
+- categoriile duplicate;
+- puritatea claselor față de aur și contopirile false;
+- **fracția reformulărilor cu aceeași ecuație canonică.** Ecuația canonică = (clasa tiparului, valorile care poartă sens). Un loc poartă sens dacă o regulă îl leagă (`src/memory/meaning.mjs`).
+
+GPARA are aceleași sensuri în mai multe forme (MOVE: went / moved / travelled / went back to; HAVE: has / holds / picked up / is holding) și o capcană de antonim (LEAVE: left).
+
+| | Referința (E0) | Cu clase și formă după nivel, semințele 1 / 2 / 3 |
+| --- | --- | --- |
+| GPARA: reformulări cu aceeași ecuație | 2% / 4% / – | **58% / 71% / 79%** |
+| GPARA: capcane MOVE/LEAVE contopite | 0% | **0%** pe toate semințele |
+| GPARA: contopiri false între sensuri | – | 0 |
+| GPARA: răspunsuri pe puse deoparte | 40% / 37% / – | 63% / 57% / 46% |
+| BABI2: reguli de paragraf / răspunsuri | 131 / 44% | 111 / 45–46% |
+| Blocul A | A1–A6 trec | A1–A6 trec pe toate semințele; A7: 1 / 2 / 5 propoziții |
+| G10 / G11 (control orb) | 100% / 0% | 100% / **0%** |
+
+**Ce s-a obținut.** Pe GPARA, clasa MOVE = {went back, moved, went, travelled} e descoperită corect, cu două roluri comune (agent, loc) și cu forma păstrată ca loc separat. Reguli generale peste clasă:
+- `[M(agent, loc; formă), M(…), Where(agent), Răspuns(loc)]`;
+- varianta cu capcana LEAVE.
+
+LEAVE nu intră în clasă.
+
+**Ce nu merge încă.**
+- **HAVE nu își formează clasa:** zeci de reguli mici, ultra-specifice („Kurt holds the wallet. What does Kurt have? wallet.”) consumă poveștile înaintea regulii generale. E ordinea lacomă a grupării; varianta „grupurile mari întâi” generalizează prea mult (reformulări 0%).
+- **BABI2:** tiparele principale ale faptelor sunt „pe loc” (verbul ca loc liber), deci clasele nu ajută acolo.
+- **G11** rămâne la 0%: corespondența dintre formele verbului („carried” → „carry”) nu e o repetiție.
+
+Detaliile și ce s-a încercat fără succes sunt în DECIZII.md, D15 și D16.

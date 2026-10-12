@@ -176,8 +176,21 @@ export class Predictor {
             for (const [x, wt] of ms) addTo(s3, x, (w * wt) / tot);
           }
         } else if (it.args.every((s) => m.bind.has(s))) {
-          const items = mem.appChildren(it.sub, it.args.map((s) => m.bind.get(s)), (its) => this.temp.make(its, mem.atoms[it.sub].level));
-          addTo(s1, this.temp.make(items, mem.atoms[it.sub].level), w);
+          const q = mem.atoms[it.sub];
+          const mk = (its) => this.temp.make(its, q.level);
+          if (q.def.type === 'PCLASS') {
+            // printr-o clasă: membrul din locul formei, sau fiecare membru posibil, după ponderea lui
+            const bind = new Map(m.bind);
+            const forms = m.bind.has(it.form) ? [[m.bind.get(it.form), 1]] : [...mem.atoms[mem.atoms[it.form].accepts].def.members];
+            const tot = forms.reduce((a, [, x]) => a + x, 0);
+            for (const [member, wt] of forms) {
+              bind.set(it.form, member);
+              addTo(s1, mk(mem.subChildren(it, bind, mk)), (w * wt) / tot);
+            }
+          } else {
+            const items = mem.appChildren(it.sub, it.args.map((s) => m.bind.get(s)), mk);
+            addTo(s1, mk(items), w);
+          }
         }
       }
     // sursa 4: frecvența, plus o parte egală pentru fiecare token din vocabular.

@@ -35,9 +35,16 @@ export function matchPattern(env, pid, children, { partial = false } = {}) {
     } else if (it.slot !== undefined) {
       if (!put(it.slot, v)) return null;
     } else {
-      const fills = interpretAs(env, v, it.sub);
-      if (!fills) return null;
-      for (let j = 0; j < it.args.length; j++) if (!put(it.args[j], fills[j])) return null;
+      if (env.pattern(it.sub).type === 'PCLASS') {
+        // copil citit printr-o clasă: membrul ales intră în locul formei, valorile lui în rolurile clasei
+        const r = interpretClass(env, v, it.sub);
+        if (!r || !put(it.form, r.member)) return null;
+        for (let j = 0; j < it.args.length; j++) if (r.roles[j] !== undefined && !put(it.args[j], r.roles[j])) return null;
+      } else {
+        const fills = interpretAs(env, v, it.sub);
+        if (!fills) return null;
+        for (let j = 0; j < it.args.length; j++) if (!put(it.args[j], fills[j])) return null;
+      }
       fixed++;
     }
   }
@@ -59,4 +66,29 @@ export function interpretAs(env, v, q) {
   if (!ch) return null;
   const m = matchPattern(env, q, ch);
   return m ? m.fills : null;
+}
+
+// v citit printr-o clasă de tipare M: membrul (rescrierea principală dacă e membru, altfel primul membru care se
+// potrivește) și valorile rolurilor clasei, prin alinierea membrului. Întoarce { member, roles } sau null.
+export function interpretClass(env, v, M) {
+  const c = env.pattern(M);
+  const tryMember = (m, fills) => {
+    const roles = new Array(c.roles.length);
+    const al = c.align[m];
+    for (let j = 0; j < al.length; j++) {
+      if (roles[al[j]] !== undefined && roles[al[j]] !== fills[j]) return null;
+      roles[al[j]] = fills[j];
+    }
+    return { member: m, roles };
+  };
+  const x = env.interp(v);
+  if (x && c.align[x.pattern]) return tryMember(x.pattern, x.fills);
+  for (const m of c.members) {
+    const fills = interpretAs(env, v, m);
+    if (fills) {
+      const r = tryMember(m, fills);
+      if (r) return r;
+    }
+  }
+  return null;
 }

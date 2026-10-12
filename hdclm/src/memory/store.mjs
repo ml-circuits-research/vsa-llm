@@ -141,11 +141,22 @@ export class Memory {
     return p.items.map((it) => {
       if (it.fixed !== undefined) return it.fixed;
       if (it.slot !== undefined) return bind.get(it.slot);
-      const sub = this.appChildren(it.sub, it.args.map((s) => bind.get(s)), resolve);
+      const sub = this.subChildren(it, bind, resolve);
       const id = resolve(sub);
       if (id === undefined) fail('I2', `copilul cuibărit al tiparului ${patternId} nu există ca atom`);
       return id;
     });
+  }
+
+  // copiii unui copil cuibărit: tipar (args = locurile lui) sau clasă de tipare (args = rolurile clasei,
+  // form = locul care reține membrul folosit; locurile membrului se iau din roluri prin align)
+  subChildren(it, bind, resolve = (items) => this.lookup(items)) {
+    const q = this.atoms[it.sub].def;
+    if (q.type !== 'PCLASS') return this.appChildren(it.sub, it.args.map((s) => bind.get(s)), resolve);
+    const member = bind.get(it.form);
+    const al = q.align[member];
+    if (!al) fail('I6', `membrul ${member} nu este în clasa ${it.sub}`);
+    return this.appChildren(member, al.map((r) => bind.get(it.args[r])), resolve);
   }
 
   children(id) {
@@ -188,7 +199,7 @@ export class Memory {
 
   byLevel(level) {
     if (!this._byLevel) {
-      this._byLevel = levels(() => ({ SEQ: [], APP: [], PATTERN: [], CHOICE: [] }));
+      this._byLevel = levels(() => ({ SEQ: [], APP: [], PATTERN: [], CHOICE: [], PCLASS: [] }));
       for (let id = 1; id < this.atoms.length; id++) {
         const a = this.atoms[id];
         if (a.kind === 'SENSE') this._byLevel[a.level][a.def.type].push(id);
@@ -229,12 +240,16 @@ export class Memory {
           live.add(id);
           stack.push(id);
         }
-      while (stack.length)
-        for (const it of this.atoms[stack.pop()].def.items)
-          if (it.sub !== undefined && !live.has(it.sub)) {
-            live.add(it.sub);
-            stack.push(it.sub);
-          }
+      const mark = (x) => {
+        if (live.has(x)) return;
+        live.add(x);
+        stack.push(x);
+      };
+      while (stack.length) {
+        const d = this.atoms[stack.pop()].def;
+        if (d.type === 'PCLASS') d.members.forEach(mark);
+        else for (const it of d.items) if (it.sub !== undefined) mark(it.sub);
+      }
       this._live = live;
     }
     return this._live;
@@ -242,7 +257,7 @@ export class Memory {
   // o alegere este vie dacă o acceptă un loc al unui tipar viu
   isLive(id) {
     const d = this.atoms[id].def;
-    if (d?.type === 'PATTERN') return this.liveSet().has(id);
+    if (d?.type === 'PATTERN' || d?.type === 'PCLASS') return this.liveSet().has(id);
     if (d?.type === 'CHOICE') return (this.choiceUsers().get(id) ?? []).some((p) => this.liveSet().has(p));
     return true;
   }
@@ -252,8 +267,8 @@ export class Memory {
       this._choiceUsers = new Map();
       for (let id = 1; id < this.atoms.length; id++) {
         const d = this.atoms[id].def;
-        if (d?.type !== 'PATTERN') continue;
-        for (const s of d.slots) {
+        if (d?.type !== 'PATTERN' && d?.type !== 'PCLASS') continue;
+        for (const s of d.type === 'PCLASS' ? d.roles : d.slots) {
           const c = this.atoms[s].accepts;
           if (!this._choiceUsers.has(c)) this._choiceUsers.set(c, []);
           if (!this._choiceUsers.get(c).includes(id)) this._choiceUsers.get(c).push(id);
@@ -307,15 +322,21 @@ export class Memory {
       map.set(p.tmp, pid);
       for (const s of p.structs) map.set(s.tmp, push({ kind: 'STRUCT', pattern: pid, accepts: null }));
     }
+    // clasele de tipare: rolurile sunt atomi de structură ai clasei, comuni tuturor membrilor (D15)
+    for (const c of pkg.newClasses ?? []) {
+      const cid = push({ kind: 'SENSE', level: c.level, def: null, count: 0, choices: [] });
+      map.set(c.tmp, cid);
+      for (const r of c.roles) map.set(r.tmp, push({ kind: 'STRUCT', pclass: cid, accepts: null }));
+    }
     const touchedChoices = new Set();
     for (const c of pkg.newChoices ?? []) {
       const id = R(c.tmp);
-      for (const [m, w] of c.members) this.atoms[id].def.members.set(m, w);
+      for (const [m, w] of c.members) this.atoms[id].def.members.set(R(m), w);
       touchedChoices.add(id);
     }
     for (const a of pkg.addMembers ?? []) {
       const ms = this.atoms[a.choice].def.members;
-      for (const [m, w] of a.members) ms.set(m, (ms.get(m) ?? 0) + w);
+      for (const [m, w] of a.members) ms.set(R(m), (ms.get(R(m)) ?? 0) + w);
       touchedChoices.add(a.choice);
     }
     for (const p of pkg.newPatterns ?? []) {
@@ -323,10 +344,32 @@ export class Memory {
       this.atoms[R(p.tmp)].def = {
         type: 'PATTERN',
         items: p.items.map((it) =>
-          it.fixed !== undefined ? { fixed: it.fixed } : it.slot !== undefined ? { slot: R(it.slot) } : { sub: R(it.sub), args: it.args.map(R) },
+          it.fixed !== undefined
+            ? { fixed: it.fixed }
+            : it.slot !== undefined
+              ? { slot: R(it.slot) }
+              : it.form !== undefined
+                ? { sub: R(it.sub), args: it.args.map(R), form: R(it.form) }
+                : { sub: R(it.sub), args: it.args.map(R) },
         ),
         slots: p.slots.map(R),
       };
+    }
+    for (const c of pkg.newClasses ?? []) {
+      for (const r of c.roles) this.atoms[R(r.tmp)].accepts = R(r.accepts);
+      const align = {};
+      for (const [m, al] of c.align) align[R(m)] = al.slice();
+      this.atoms[R(c.tmp)].def = { type: 'PCLASS', members: c.members.map(R), roles: c.roles.map((r) => R(r.tmp)), align };
+    }
+    for (const a of pkg.classAdds ?? []) {
+      const d = this.atoms[a.cls].def;
+      for (const [m, al] of a.align) {
+        const mm = R(m);
+        if (!d.align[mm]) {
+          d.members.push(mm);
+          d.align[mm] = al.slice();
+        }
+      }
     }
     // 2. rescrierile: același id, aceiași copii
     this._clearCaches();

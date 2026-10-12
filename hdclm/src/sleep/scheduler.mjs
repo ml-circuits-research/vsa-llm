@@ -9,7 +9,11 @@ export function deepSleep(mem, cfg, opts = {}) {
   const passes = [];
   const max = cfg.maxDeepPasses ?? 20;
   for (let i = 0; i < max; i++) {
-    const r = sleepPass(mem, cfg, opts);
+    // V3 (D16): validarea rulează în toate trecerile ('all'), doar în prima trecere a somnului adânc ('first')
+    // sau deloc ('none')
+    const mode = cfg.validateMode ?? 'all';
+    const useVal = mode === 'all' || (mode === 'first' && i === 0);
+    const r = sleepPass(mem, cfg, useVal ? opts : { ...opts, validate: undefined });
     const st = stats(mem, cfg.measure);
     const rec = { pass: i + 1, kind: 'deep', ...st, before: r.before, proposed: r.proposed, accepted: r.accepted, newPatterns: r.newPatterns, rewrites: r.rewrites };
     if (r.validation) rec.validation = { base: r.validation.base, final: r.validation.final };
