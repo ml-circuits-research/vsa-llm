@@ -111,3 +111,29 @@ export class VectorSim {
     return this.view.S.similarity(this.view.enr(x), this.view.enr(y));
   }
 }
+
+// Strategia din configurare. I13: o strategie cu vectori se folosește numai după ce trece H1–H8.
+// Verificarea e o funcție pură de (nume, D, sămânță), deci rezultatul ei se ține minte.
+import { makeStrategy } from '../hdc/strategy.mjs';
+import { checkStrategy } from '../hdc/check.mjs';
+import { fail } from '../core/invariants.mjs';
+const checked = new Map();
+
+export function strategyFor(cfg) {
+  if (!cfg.strategy || cfg.strategy === 'exact') return null;
+  const key = `${cfg.strategy}|${cfg.D}|${cfg.seed}`;
+  if (!checked.has(key)) {
+    const S = makeStrategy(cfg.strategy, { D: cfg.D, seed: cfg.seed });
+    const res = checkStrategy(S, { trials: cfg.checkTrials ?? 500, seed: cfg.seed });
+    if (!res.pass) fail('I13', `strategia ${cfg.strategy} (D=${cfg.D}) nu trece H1–H8: ${Object.entries(res.props).filter(([, p]) => !p.pass).map(([k]) => k).join(',')}`);
+    checked.set(key, S);
+  }
+  return checked.get(key);
+}
+
+// asemănarea folosită de somn și de predicție: exactă sau pe vectori
+export function makeSim(cfg, exactFactory, vectorSource) {
+  const S = strategyFor(cfg);
+  if (!S) return exactFactory();
+  return new VectorSim(new VectorView(vectorSource, S, { seed: cfg.seed, w: cfg.w }));
+}

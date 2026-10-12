@@ -1,6 +1,7 @@
 // Contextul unei treceri de somn: memoria (înghețată) plus propunerile adunate până acum.
 // Id-urile negative sunt atomi propuși (alegeri, tipare, locuri), care există doar în pachet.
 import { ExactSim } from '../memory/similarity.mjs';
+import { makeSim, VectorView } from '../memory/vectors.mjs';
 
 export class PassContext {
   constructor(mem, cfg) {
@@ -16,7 +17,11 @@ export class PassContext {
     this.seen = {};
     this.extraMembers = new Map(); // memorie neînghețată (A4): membri noi vizibili imediat
     this.extraChoices = new Map();
-    this.sim = new ExactSim(ExactSim.memorySource(mem, cfg.freeze === false ? this.extraChoices : null), cfg.w);
+    this.sim = makeSim(
+      cfg,
+      () => new ExactSim(ExactSim.memorySource(mem, cfg.freeze === false ? this.extraChoices : null), cfg.w),
+      VectorView.memorySource(mem),
+    );
     this.memChoiceAdds = new Map(); // alegere din memorie -> Map(valoare -> pondere) propuse
 
   }

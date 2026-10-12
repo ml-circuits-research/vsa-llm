@@ -1,3 +1,4 @@
+import { strategyFor, VectorView } from '../memory/vectors.mjs';
 import { findLift } from './propose.mjs';
 // Pasul 2: gruparea unităților care au aceiași copii, în afară de câteva poziții libere F.
 // Prima implementare: același număr de copii, aliniate de la început.
@@ -81,6 +82,14 @@ export function candidateGroups(ctx, units, level) {
       const chs = b.units.map((u) => mem.children(u));
       b.F = [...Array(b.n).keys()].filter((i) => chs.some((c) => c[i] !== chs[0][i]));
     }
+  // cu o strategie cu vectori: o unitate rămâne într-un grup doar dacă are printre vecinii ei apropiați
+  // (nearest peste comp, asemănare >= θ_group) un alt membru al grupului; grupul se verifică apoi exact.
+  // Grupurile abstracte (după formă) nu trec prin acest filtru: forma nu e codată în comp.
+  const S = strategyFor(cfg);
+  if (S) {
+    const near = nearSets(mem, cfg, S, units);
+    for (const b of buckets.values()) if (!b.abstract) b.units = b.units.filter((u) => b.units.some((v) => v !== u && near.get(u).has(v)));
+  }
   const cand = [...buckets.values()].filter((g) => g.F.length > 0 && valid(mem, g.units, g.F, cfg.m_min));
   for (const g of cand) g.slots = slotsAfter(ctx, g.units, g.F);
   cand.sort((a, b) => a.F.length - b.F.length || b.units.length - a.units.length || a.slots - b.slots || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
@@ -106,4 +115,14 @@ export function group(ctx, units, level) {
     groups.push({ ...g, units: free });
   }
   return groups;
+}
+
+function nearSets(mem, cfg, S, units) {
+  const view = new VectorView(VectorView.memorySource(mem), S, { seed: cfg.seed, w: cfg.w });
+  const cands = units.map((id) => ({ id, v: view.comp(id) }));
+  const theta = cfg.theta_group ?? 0.2;
+  const k = cfg.nearK ?? 32;
+  const out = new Map();
+  for (const u of units) out.set(u, new Set(S.nearest(view.comp(u), cands, k + 1).filter((x) => x.id !== u && x.sim >= theta).map((x) => x.id)));
+  return out;
 }

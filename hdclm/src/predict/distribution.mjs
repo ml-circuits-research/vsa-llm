@@ -1,5 +1,6 @@
 // Predicția (secțiunea 11): probabilitatea fiecărui token să urmeze după un început de text. Nu scrie în memorie.
 import { ExactSim } from '../memory/similarity.mjs';
+import { makeSim } from '../memory/vectors.mjs';
 import { matchPattern, bestMatch } from '../memory/match.mjs';
 import { segmentPrefix, buildUnit } from '../text/boundaries.mjs';
 import { tokenize } from '../text/tokenizer.mjs';
@@ -74,10 +75,16 @@ export class Predictor {
     this.cfg = cfg;
     this.temp = new TempStore(mem);
     const t = this.temp;
-    this.sim = new ExactSim(
+    const tsrc = { isToken: (id) => t.isToken(id), children: (id) => t.children(id), choicesOf: (id) => (t.isTemp(id) ? [] : mem.atoms[id].choices ?? []) };
+    this.sim = makeSim(cfg, () => new ExactSim(
       { isToken: (id) => t.isToken(id), children: (id) => t.children(id), choicesOf: (id) => (t.isTemp(id) ? [] : mem.atoms[id].choices ?? []) },
       cfg.w,
-    );
+    ), {
+      ...tsrc,
+      def: (id) => (t.isTemp(id) ? (t.isToken(id) ? undefined : { type: 'SEQ' }) : mem.atoms[id].def),
+      accepts: (s) => mem.atoms[s].accepts,
+      members: (c) => mem.atoms[c].def.members,
+    });
     this.voters = [];
     this.patterns = [];
     for (let l = 0; l <= LEVELS; l++) {
