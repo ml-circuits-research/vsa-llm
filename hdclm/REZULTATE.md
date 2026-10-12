@@ -203,3 +203,12 @@ Regulile găsite, citite din memorie:
 - Blocul A rămâne neschimbat pe semințele 1–3. Pe G8 apare, pe lângă regula generală (54 de povești), o regulă mică pentru 2 povești cu o repetiție întâmplătoare.
 
 **A7 (G9):** regulile se fragmentează: câte una pentru fiecare număr de propoziții intercalate și pentru fiecare formă a lor. Rezultat: > 90% până la 1–3 propoziții. Vezi decizia propusă mai jos.
+
+## G11: set de control orb (proiectat fără acces la mecanism, rulat o dată)
+
+`node src/cli.mjs experiment G11`: **pică**. 3,7% / 0% / 0% pe semințele 1–3; fără somn 0%. Predicția de top după întrebare este „The”, adică începutul unui fapt nou. Cauzele (deplasarea, forma verbului, fragmentarea) sunt în DECIZII.md, D10. Rezultatul rămâne consemnat așa; o reparație ulterioară îl va face „văzut”.
+
+## Blocul B, pasul 6 (în lucru)
+
+- **B1** (`node src/cli.mjs experiment B1`, 99 s): bipolar și phasor trec H1–H8 la D = 1024, 4096 și 16384. **Binary iese**: pică H5 și H6 (majoritatea rotunjește sumele, greșeala 1 din specificație) și H8 la D ≤ 4096. D = 65536 nu a fost rulat.
+- **Exact față de vectori** (`test/similarity.test.mjs`): pe G7 după somn, |sim(comp x, comp y) − simC(x, y)| și aceeași diferență pentru enr sunt sub t = 0,078, la bipolar și phasor, D = 4096. Un bug găsit pe drum: etichetele nenormalizate făceau ca „.” să acopere numele în sume (abatere 0,40). Reparat.

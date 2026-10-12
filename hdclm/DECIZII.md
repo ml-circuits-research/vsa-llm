@@ -111,3 +111,14 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
   - Un „gol” de lungime variabilă în tipare: extindere a modelului de date (secțiunea 6); nu costă minute (P1), deci nu s-a făcut acum.
 - **Consecințe.** Un fapt aflat departe de întrebare nu e găsit de reguli dacă formele diferă.
 - **Revizuire.** Obligatoriu la E6 (bAbI), care are exact fapte amestecate cu propoziții fără legătură. Atunci se decide „golul”.
+
+## D10. G11 (control orb) pică; D9 se revizuiește: deplasarea vine înainte de blocul D
+
+- **Context.** G11 a fost proiectat de un subagent care n-a avut acces la mecanism. Conține 2 sau 3 fapte tranzitive („The girl carried the rope.”) și o întrebare despre unul dintre ele, cu forma verbului schimbată și cu locul întrebat variabil („What did the girl carry?” / „Who found the bell?”). A fost rulat o singură dată, fără nicio modificare înainte.
+- **Rezultat.** 3,7% / 0% / 0% pe semințele 1–3 (fără somn 0%). Consemnat așa cum a ieșit.
+- **Diagnostic (fără reparații):**
+  1. **Numărul de fapte variază.** Votul și gruparea aliniază de la început. În poveștile cu 3 fapte, pe poziția 3 urmează un fapt, deci după întrebare predicția de top este „The”. Este problema de deplasare.
+  2. **Forma verbului se schimbă** („carried” → „carry”). Nu e o repetiție, deci locul legat nu poate face legătura. Ar trebui învățată o corespondență între forme (o pereche, ca orașul și țara din G3).
+  3. **Fragmentare:** 77 de tipare de propoziție, câte unul pe verb, și doar 3 reguli de paragraf, pentru 133 de povești.
+- **Revizuirea lui D9.** Deplasarea nu mai poate aștepta textul adevărat: e necesară deja pentru întrebări cu un număr variabil de fapte. Se programează după blocul B, ca etapă separată, cu un set de control nou (G12) rulat orb după reparație. Pentru punctul 2 (corespondențe între forme) nu există încă mecanism; e o problemă deschisă, de discutat.
+- **Consecință pentru afirmații.** Rezultatele bune de pe G7–G10 arată că mecanismul găsește reguli de legare când faptele au poziții fixe și valorile se repetă identic. Nu arată încă generalitate pe structuri variabile.
