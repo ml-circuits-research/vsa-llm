@@ -98,3 +98,24 @@ Profilul după acești pași (A7 + G10, 21 s): **68% din timp e verificarea pe t
 | tăierea incrementală la predicția pe documente (aceleași stive, nodurile închise memorate) | identic octet cu octet; somnul complet pe 3k: 15,8 → 11,8 s |
 
 **Pe text adevărat, somnul fără validare înrăutățește puțin predicția.** Asta e o constatare de mecanism (blocurile D și E), nu de viteză.
+
+## Somnul la 10k tokeni: unde se duce timpul (măsurat pe treceri)
+
+| Trecere | Timp | Detalii |
+| --- | --- | --- |
+| obișnuită 1 | 61,8 s | 126 de propuneri, 43 acceptate, **77 de evaluări pe validare** (pachetul pică validarea și se înjumătățește repetat) |
+| obișnuită 2 | 47,3 s | 83 de propuneri, 3 acceptate, 53 de evaluări pe validare |
+| alternative 1, 2 | 0,6 s fiecare | 50 de candidați, schimbare acceptată |
+
+Validarea pe eșantion (o trecere, 10k tokeni de învățare):
+
+| Validare pe | Timp | Acceptate | Pași | Eroare pe toată validarea | Eroare pe test |
+| --- | --- | --- | --- | --- | --- |
+| 6 documente (1073 tokeni) | 64,0 s | 43 | 77 | 7,7793 | 7,4313 |
+| 2 documente (363 tokeni) | 27,5 s | 33 | 102 | 7,8039 | 7,4329 |
+| fără validare | 0,4 s | 72 | 0 | 7,8505 | 7,4438 |
+
+**Concluzie.** Validarea ajută, dar puțin: −0,07 biți/token pe validare, doar −0,013 pe test. Și costă de ~150 de ori mai mult decât restul somnului. Un eșantion mai mic nu rezolvă: face mai mulți pași de înjumătățire și decizii mai proaste. Problema e procedura (înjumătățirea pachetului), nu mărimea textului de validare. Variante, de hotărât (schimbă rezultatele):
+- **V1.** Validare pe niveluri: pachetul se verifică pe nivel, de jos în sus, nu pe jumătăți arbitrare.
+- **V2.** Validare doar pentru tiparele noi care au cele mai multe locuri libere (cele care generalizează), nu pentru tot pachetul.
+- **V3.** Fără validare în somnurile ușoare; validare doar în somnul adânc, din când în când.
