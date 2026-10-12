@@ -4,10 +4,10 @@ import { predError, describe, total } from '../metrics.mjs';
 import { Memory } from '../../memory/store.mjs';
 import { ingest } from '../../wake/ingest.mjs';
 
-export function run({ seed = 1 } = {}) {
+export function run({ seed = 1, base = {} } = {}) {
   const dir = runDir('A1');
   const out = {};
-  for (const measure of ['terms', 'bits']) out[measure] = runMeasure(seed, measure);
+  for (const measure of ['terms', 'bits']) out[measure] = runMeasure(seed, measure, base);
   const sets = out.terms;
   return writeResult(dir, {
     experiment: 'A1',
@@ -18,10 +18,10 @@ export function run({ seed = 1 } = {}) {
   });
 }
 
-function runMeasure(seed, measure) {
+function runMeasure(seed, measure, base = {}) {
   const sets = {};
   for (const set of ['G1', 'G2']) {
-    const r = trainSimple({ set, seed, overrides: { measure }, splitOpts: { allTrain: true }, dir: null });
+    const r = trainSimple({ base, set, seed, overrides: { ...base, measure }, splitOpts: { allTrain: true }, dir: null });
     // aceeași memorie fără somn, ca referință
     const raw = new Memory(r.cfg);
     for (const d of r.split.train) ingest(raw, d.text, { docName: d.id });
@@ -30,7 +30,8 @@ function runMeasure(seed, measure) {
     const desc = describe(r.mem);
     const choicesUsed = new Set(desc.patterns.flatMap((p) => p.slots.map((s) => s.accepts)));
     const crit = {
-      twoPatternsOneChoice: desc.patterns.length === 2 && choicesUsed.size === 1,
+      // două tipare care folosesc aceleași alegeri
+      twoPatternsSharedChoices: desc.patterns.length === 2 && [...choicesUsed].every((c) => desc.patterns.every((p) => p.slots.some((s) => s.accepts === c))),
       totalSmaller: total(r.mem, r.cfg.measure) < r.before.total,
       reconstruction100: r.recon === 1,
       errorLower: errSleep < errNoSleep,

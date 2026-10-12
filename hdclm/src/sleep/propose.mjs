@@ -43,9 +43,55 @@ function findIdentical(ctx, level, sig) {
   return null;
 }
 
+// o coloană se poate ridica la tiparul q dacă toate valorile ei sunt aplicări ale lui q. Cu shadowLift,
+// dacă valorile sunt aplicări ale unor tipare diferite, se caută un grup-umbră (pierdut la atribuirea
+// lacomă, pe nivelul de dedesubt) care le cuprinde pe toate: valorile pot trece la tiparul lui.
+export function findLift(ctx, col) {
+  const ints = col.map((v) => ctx.interp(v));
+  const q = ints[0]?.pattern;
+  if (q !== undefined && ints.every((x) => x && x.pattern === q)) return { q };
+  if (!ctx.cfg.shadowLift) return null;
+  const vals = [...new Set(col)];
+  if (!vals.every((v) => ctx.mem.isUnit(v) && !ctx.locked.has(v) && !nestedInMemory(ctx.mem, v))) return null;
+  for (const g of ctx.shadows[ctx.mem.level(vals[0])] ?? []) if (vals.every((v) => g.unitSet.has(v))) return { shadow: g, vals };
+  return null;
+}
+
+function nestedInMemory(mem, u) {
+  return mem.parents(u).some(([p, pos]) => {
+    const d = mem.atoms[p].def;
+    return d.type === 'APP' && mem.atoms[d.pattern].def.items[pos].sub !== undefined;
+  });
+}
+
+// valorile trec la tiparul grupului-umbră; întoarce false (și refacerea stării) dacă nu se poate
+function materialize(ctx, lift) {
+  const { shadow, vals } = lift;
+  const sorted = vals.slice().sort((a, b) => a - b);
+  const saved = sorted.map((v) => [v, ctx.rewriteOf.get(v), ctx.rewriteOf.has(v) ? ctx.proposals.get(ctx.rewriteOf.get(v)).units.get(v) : null]);
+  for (const [v, r] of saved) if (r !== undefined) {
+    ctx.proposals.get(r).units.delete(v);
+    ctx.rewriteOf.delete(v);
+  }
+  const pid = proposeGroup(ctx, { ...shadow, units: sorted }, ctx.mem.level(sorted[0]));
+  if (pid !== null) {
+    ctx.switched += sorted.length;
+    return true;
+  }
+  for (const [v, r, f] of saved) if (r !== undefined) {
+    ctx.proposals.get(r).units.set(v, f);
+    ctx.rewriteOf.set(v, r);
+  }
+  return false;
+}
+
 export function propose(ctx, groups, level) {
+  for (const g of groups) proposeGroup(ctx, g, level);
+}
+
+export function proposeGroup(ctx, g, level) {
   const { mem, cfg } = ctx;
-  for (const g of groups) {
+  {
     const U = g.units;
     const ch = U.map((u) => mem.children(u));
     const F = new Set(g.F);
@@ -67,9 +113,12 @@ export function propose(ctx, groups, level) {
       }
       const col = ch.map((c) => c[i]);
       // ridicare: toate valorile sunt aplicări ale aceluiași tipar q
+      let lift = cfg.d_max >= 1 ? findLift(ctx, col) : null;
+      if (lift?.shadow && !materialize(ctx, lift)) lift = null;
       const ints = col.map((v) => ctx.interp(v));
       const q = ints[0]?.pattern;
-      if (cfg.d_max >= 1 && q !== undefined && ints.every((x) => x && x.pattern === q)) {
+      if (lift && q !== undefined && ints.every((x) => x && x.pattern === q)) {
+        for (const v of col) ctx.locked.add(v);
         const qd = ctx.pattern(q);
         spec.push({ sub: q, argCols: qd.slots.map((_, j) => ints.map((x) => x.fills[j])) });
         for (const v of col) if (ctx.rewriteOf.has(v)) deps.add(ctx.rewriteOf.get(v));
@@ -79,7 +128,7 @@ export function propose(ctx, groups, level) {
     // legare + alegeri
     const proto = spec.map((sp) => (sp.fixed !== undefined ? sp : sp.col ? { slotIdx: colIndex(sp.col) } : { sub: sp.sub, argIdx: sp.argCols.map(colIndex) }));
     const choiceOf = cols.map((c) => choiceFor(ctx, c, level));
-    if (choiceOf.some((c) => c === null)) continue; // o coloană constantă fără alegere potrivită
+    if (choiceOf.some((c) => c === null)) return null; // o coloană constantă fără alegere potrivită
     const items = proto.map((it) => (it.fixed !== undefined ? it : it.slotIdx !== undefined ? { slot: `#${it.slotIdx}` } : { sub: it.sub, args: it.argIdx.map((k) => `#${k}`) }));
     const sig = signature(ctx, items, (s) => choiceOf[Number(s.slice(1))]);
     let pid = findIdentical(ctx, level, sig);
@@ -115,5 +164,6 @@ export function propose(ctx, groups, level) {
       ctx.proposal(pid, pid < 0 ? true : false, level);
     }
     U.forEach((u, r) => ctx.addRewrite(pid, u, slotOrder.map((k) => cols[k][r]), [...deps]));
+    return pid;
   }
 }

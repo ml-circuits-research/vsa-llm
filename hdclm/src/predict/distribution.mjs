@@ -85,7 +85,7 @@ export class Predictor {
       const v = [...bl.SEQ, ...bl.APP].sort((a, b) => a - b).map((id) => ({ id, children: mem.children(id), count: mem.atoms[id].count || 1 }));
       for (const [x, n] of [...mem.single[l]].sort((a, b) => a[0] - b[0])) v.push({ id: `s${x}`, children: [x], count: n });
       this.voters[l] = v;
-      this.patterns[l] = bl.PATTERN.slice().sort((a, b) => a - b);
+      this.patterns[l] = mem.livePatterns(l).slice().sort((a, b) => a - b);
     }
     this.vocab = [];
     for (let id = 1; id < mem.atoms.length; id++) if (mem.atoms[id].kind === 'TOKEN') this.vocab.push(id);

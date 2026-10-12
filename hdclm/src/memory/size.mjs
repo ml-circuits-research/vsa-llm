@@ -31,7 +31,7 @@ export function bitsContext(mem, extra = { atoms: 0, patterns: 0 }) {
   for (let id = 1; id < mem.atoms.length; id++) {
     const a = mem.atoms[id];
     if (a.kind === 'TOKEN' || a.def?.type === 'SEQ' || a.def?.type === 'APP') atoms++;
-    if (a.def?.type === 'PATTERN') patterns++;
+    if (a.def?.type === 'PATTERN' && mem.usage(id) > 0) patterns++;
   }
   return { V: atoms + extra.atoms, P: patterns + extra.patterns };
 }
@@ -69,7 +69,7 @@ export function total(mem, measure = 'terms') {
   const view = memoryView(mem);
   const bctx = measure === 'bits' ? bitsContext(mem) : null;
   let t = 0;
-  for (let id = 1; id < mem.atoms.length; id++) if (mem.atoms[id].kind === 'SENSE') t += defSize(view, id, measure, bctx);
+  for (let id = 1; id < mem.atoms.length; id++) if (mem.atoms[id].kind === 'SENSE' && mem.isLive(id)) t += defSize(view, id, measure, bctx);
   return t;
 }
 
@@ -78,8 +78,8 @@ export function stats(mem, measure = 'terms') {
   return {
     version: mem.version,
     total: total(mem, measure),
-    patterns: mem.allOfType('PATTERN').length,
-    choices: mem.allOfType('CHOICE').length,
+    patterns: mem.allOfType('PATTERN').filter((p) => mem.isLive(p)).length,
+    choices: mem.allOfType('CHOICE').filter((c) => mem.isLive(c)).length,
     seq: mem.allOfType('SEQ').length,
     app: mem.allOfType('APP').length,
   };

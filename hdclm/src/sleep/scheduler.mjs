@@ -1,6 +1,7 @@
 // Când rulează somnul: ușor (tamponul are W unități), adânc (după N_deep somnuri ușoare, sau la cerere).
 // Firele de execuție nu sunt implementate încă (pasul 8).
 import { sleepPass } from './pass.mjs';
+import { alternativePass } from './alternatives.mjs';
 import { stats } from '../memory/size.mjs';
 import { LEVELS } from '../memory/store.mjs';
 
@@ -14,7 +15,14 @@ export function deepSleep(mem, cfg, opts = {}) {
     if (r.validation) rec.validation = { base: r.validation.base, final: r.validation.final };
     passes.push(rec);
     opts.log?.(rec);
-    if (!(r.after < r.before - 1e-9)) break;
+    if (r.after < r.before - 1e-9) continue;
+    // trecerile obișnuite nu mai scad totalul: se încearcă interpretările alternative
+    if (!cfg.alternatives) break;
+    const a = alternativePass(mem, cfg);
+    const arec = { pass: i + 1, kind: 'alternative', ...stats(mem, cfg.measure), before: a.before, changed: a.changed, group: a.key ?? null, gain: a.gain ?? 0, tried: a.tried };
+    passes.push(arec);
+    opts.log?.(arec);
+    if (!a.changed) break;
   }
   return passes;
 }

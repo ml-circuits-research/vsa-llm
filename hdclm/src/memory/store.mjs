@@ -30,6 +30,7 @@ export class Memory {
     this._unfold = new Map();
     this._byLevel = null;
     this._usage = null;
+    this._choiceUsers = null;
   }
 
   _write(what) {
@@ -204,6 +205,34 @@ export class Memory {
       }
     }
     return this._usage.get(patternId) ?? 0;
+  }
+
+  // tipare vii: cu cel puțin o aplicare. Un tipar rămas fără aplicări (după o alternativă) nu mai costă nimic.
+  livePatterns(level) {
+    return this.byLevel(level).PATTERN.filter((p) => this.usage(p) > 0);
+  }
+  // o alegere este vie dacă o acceptă un loc al unui tipar viu
+  isLive(id) {
+    const d = this.atoms[id].def;
+    if (d?.type === 'PATTERN') return this.usage(id) > 0;
+    if (d?.type === 'CHOICE') return (this.choiceUsers().get(id) ?? []).some((p) => this.usage(p) > 0);
+    return true;
+  }
+  // alegere -> tiparele care o folosesc
+  choiceUsers() {
+    if (!this._choiceUsers) {
+      this._choiceUsers = new Map();
+      for (let id = 1; id < this.atoms.length; id++) {
+        const d = this.atoms[id].def;
+        if (d?.type !== 'PATTERN') continue;
+        for (const s of d.slots) {
+          const c = this.atoms[s].accepts;
+          if (!this._choiceUsers.has(c)) this._choiceUsers.set(c, []);
+          if (!this._choiceUsers.get(c).includes(id)) this._choiceUsers.get(c).push(id);
+        }
+      }
+    }
+    return this._choiceUsers;
   }
 
   unitCount() {

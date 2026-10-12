@@ -16,10 +16,10 @@ function pairs(mem, cfg, docs) {
   return { acc: rows.filter((r) => r.ok).length / rows.length, rows };
 }
 
-export function run({ seed = 1 } = {}) {
+export function run({ seed = 1, base = {} } = {}) {
   const dir = runDir('A3');
-  const noSleep = trainSimple({ set: 'G3', seed, splitOpts: { allTrain: true }, sleep: false });
-  const r = trainSimple({ set: 'G3', seed, splitOpts: { allTrain: true }, validate: false });
+  const noSleep = trainSimple({ base, set: 'G3', seed, splitOpts: { allTrain: true }, sleep: false });
+  const r = trainSimple({ base, set: 'G3', seed, splitOpts: { allTrain: true }, validate: false });
   const a0 = pairs(noSleep.mem, noSleep.cfg, r.split.train);
   const a1 = pairs(r.mem, r.cfg, r.split.train);
   return writeResult(dir, {

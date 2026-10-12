@@ -23,5 +23,9 @@
   "packageJudge": true,
   "validate": true,
   "bindSlots": true,
-  "freeze": true
+  "freeze": true,
+  "alternatives": false,
+  "altCandidates": 200,
+  "altLookahead": false,
+  "shadowLift": false
 }

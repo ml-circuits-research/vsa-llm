@@ -3,7 +3,7 @@ import { matchPattern, bestMatch } from '../memory/match.mjs';
 
 export function recognize(ctx, units, level) {
   const mem = ctx.mem;
-  const pats = mem.byLevel(level).PATTERN;
+  const pats = mem.livePatterns(level);
   const byLen = new Map();
   for (const p of pats) {
     const n = mem.atoms[p].def.items.length;

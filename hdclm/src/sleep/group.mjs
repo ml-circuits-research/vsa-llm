@@ -1,3 +1,4 @@
+import { findLift } from './propose.mjs';
 // Pasul 2: gruparea unităților care au aceiași copii, în afară de câteva poziții libere F.
 // Prima implementare: același număr de copii, aliniate de la început.
 
@@ -33,16 +34,20 @@ function slotsAfter(ctx, units, F) {
   };
   for (const f of F) {
     const col = units.map((u) => ctx.mem.children(u)[f]);
-    const ints = col.map((v) => ctx.interp(v));
-    const q = ints[0]?.pattern;
-    if (ctx.cfg.d_max >= 1 && q !== undefined && ints.every((x) => x && x.pattern === q))
-      ctx.pattern(q).slots.forEach((_, j) => add(ints.map((x) => x.fills[j])));
-    else add(col);
+    const lift = ctx.cfg.d_max >= 1 ? findLift(ctx, col) : null;
+    if (lift?.q !== undefined) {
+      const ints = col.map((v) => ctx.interp(v));
+      ctx.pattern(lift.q).slots.forEach((_, j) => add(ints.map((x) => x.fills[j])));
+    } else if (lift?.shadow) {
+      // umbra: coloanele ei libere, citite din copiii valorilor
+      for (const g of lift.shadow.F) add(col.map((v) => ctx.mem.children(v)[g]));
+    } else add(col);
   }
   return cols.length;
 }
 
-export function group(ctx, units, level) {
+// toate grupurile valide, în ordinea de luare (fără atribuirea lacomă a unităților)
+export function candidateGroups(ctx, units, level) {
   const { mem, cfg } = ctx;
   const buckets = new Map();
   const subsetCache = new Map();
@@ -62,6 +67,14 @@ export function group(ctx, units, level) {
   const cand = [...buckets.values()].filter((g) => valid(mem, g.units, g.F, cfg.m_min));
   for (const g of cand) g.slots = slotsAfter(ctx, g.units, g.F);
   cand.sort((a, b) => a.F.length - b.F.length || b.units.length - a.units.length || a.slots - b.slots || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  return cand;
+}
+
+export function group(ctx, units, level) {
+  const cand = candidateGroups(ctx, units, level);
+  for (const g of cand) g.unitSet = new Set(g.units);
+  ctx.shadows[level] = cand;
+  const { mem, cfg } = ctx;
   const taken = new Set();
   const groups = [];
   for (const g of cand) {

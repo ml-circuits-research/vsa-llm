@@ -2,12 +2,12 @@
 import { runDir, trainSimple, writeResult } from '../run.mjs';
 import { answerAccuracy, describe, total } from '../metrics.mjs';
 
-export function qa({ name, set, question, variants, threshold, seed = 1, groupBy = null }) {
+export function qa({ base, name, set, question, variants, threshold, seed = 1, groupBy = null }) {
   const dir = runDir(name);
   const res = {};
-  for (const [label, overrides] of variants) {
-    const noSleep = trainSimple({ set, seed, overrides, sleep: false });
-    const r = trainSimple({ set, seed, overrides, dir: label === variants[0][0] ? dir : null });
+  for (const [label, overrides, splitOpts = {}] of variants) {
+    const noSleep = trainSimple({ base, set, seed, overrides, splitOpts, sleep: false });
+    const r = trainSimple({ base, set, seed, overrides, splitOpts, dir: label === variants[0][0] ? dir : null });
     const held = r.split.test.filter((d) => d.heldout);
     const a = answerAccuracy(r.mem, r.cfg, held);
     const a0 = answerAccuracy(noSleep.mem, noSleep.cfg, held);
@@ -15,6 +15,7 @@ export function qa({ name, set, question, variants, threshold, seed = 1, groupBy
     const desc = describe(r.mem);
     const entry = {
       overrides,
+      splitOpts,
       train: r.split.train.length,
       testHeldout: held.length,
       totalBefore: r.before.total,

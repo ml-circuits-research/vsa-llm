@@ -55,12 +55,12 @@ export function describe(mem) {
     if (a.kind === 'STRUCT') return `S${id}`;
     return `N${id}`;
   };
-  const patterns = mem.allOfType('PATTERN').map((p) => {
+  const patterns = mem.allOfType('PATTERN').filter((p) => mem.isLive(p)).map((p) => {
     const d = mem.atoms[p].def;
     const items = d.items.map((it) => (it.fixed !== undefined ? show(it.fixed) : it.slot !== undefined ? `S${it.slot}` : `N${it.sub}(${it.args.map((s) => `S${s}`).join(',')})`));
     return { id: p, level: mem.atoms[p].level, text: `[${items.join(', ')}]`, slots: d.slots.map((s) => ({ slot: s, accepts: mem.atoms[s].accepts })), usage: mem.usage(p) };
   });
-  const choices = mem.allOfType('CHOICE').map((c) => ({ id: c, level: mem.atoms[c].level, members: [...mem.atoms[c].def.members.keys()].map((m) => (mem.isToken(m) ? mem.atoms[m].text : `N${m}:"${mem.text(m)}"`)) }));
+  const choices = mem.allOfType('CHOICE').filter((c) => mem.isLive(c)).map((c) => ({ id: c, level: mem.atoms[c].level, members: [...mem.atoms[c].def.members.keys()].map((m) => (mem.isToken(m) ? mem.atoms[m].text : `N${m}:"${mem.text(m)}"`)) }));
   return { patterns, choices };
 }
 

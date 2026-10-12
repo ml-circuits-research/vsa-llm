@@ -55,7 +55,6 @@ export class Judge {
       def: (id) => {
         const r = ctx.rewriteOf.get(id);
         if (r !== undefined && A.has(r)) return { type: 'APP', pattern: r, fills: this.byPid.get(r).units.get(id) };
-        if (r !== undefined) return { type: 'SEQ', items: mem.children(id) };
         return mem.atoms[id].def;
       },
       atom: (id) => (id < 0 ? { accepts: ctx.structs.get(id) } : mem.atoms[id]),
@@ -70,16 +69,32 @@ export class Judge {
   }
 
   region(R) {
-    const units = new Set(), choices = new Set();
+    const units = new Set(), choices = new Set(), old = new Set();
     for (const pid of R) {
       const p = this.byPid.get(pid);
       for (const u of p.units.keys()) {
         units.add(u);
         for (const c of this.mem.children(u)) if (this.mem.isUnit(c)) units.add(c);
+        // o unitate deja rescrisă care trece la alt tipar: tiparul ei vechi poate rămâne fără aplicări
+        const d = this.mem.atoms[u].def;
+        if (d.type === 'APP' && d.pattern !== pid) {
+          old.add(d.pattern);
+          for (const st of this.mem.atoms[d.pattern].def.slots) choices.add(this.mem.atoms[st].accepts);
+        }
       }
       for (const c of this.contrib.get(pid).keys()) choices.add(c);
     }
-    return { units, choices, patterns: [...R].filter((pid) => this.byPid.get(pid).isNew) };
+    return { units, choices, patterns: [...R].filter((pid) => this.byPid.get(pid).isNew), old: [...old] };
+  }
+
+  // aplicările unui tipar din memorie, după ce propunerile din A își iau unitățile
+  liveUsage(p, A) {
+    let n = this.mem.usage(p);
+    for (const pid of A) {
+      if (pid === p) continue;
+      for (const u of this.byPid.get(pid).units.keys()) if (this.mem.atoms[u].def.type === 'APP' && this.mem.atoms[u].def.pattern === p) n--;
+    }
+    return n;
   }
 
   cost(reg, A) {
@@ -87,9 +102,11 @@ export class Judge {
     let t = 0;
     for (const u of reg.units) t += defSize(v, u, this.measure, this.bctx);
     for (const pid of reg.patterns) if (A.has(pid)) t += this.patternSize(pid);
+    for (const p of reg.old) if (this.liveUsage(p, A) > 0) t += this.patternSize(p);
     for (const c of reg.choices) {
       const ms = v.members(c);
-      const exists = c > 0 || [...A].some((pid) => this.contrib.get(pid).has(c));
+      const users = c > 0 ? this.mem.choiceUsers().get(c) ?? [] : [];
+      const exists = users.some((p) => this.liveUsage(p, A) > 0) || [...A].some((pid) => this.contrib.get(pid).has(c));
       if (exists) t += this.measure === 'terms' ? ms.size : ms.size * Math.log2(Math.max(2, this.bctx.V));
     }
     return t;

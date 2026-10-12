@@ -18,6 +18,9 @@ export class PassContext {
     this.extraChoices = new Map();
     this.sim = new ExactSim(ExactSim.memorySource(mem, cfg.freeze === false ? this.extraChoices : null), cfg.w);
     this.memChoiceAdds = new Map(); // alegere din memorie -> Map(valoare -> pondere) propuse
+    this.shadows = {}; // nivel -> toate grupurile valide (și cele pierdute la atribuirea lacomă)
+    this.locked = new Set(); // unități ridicate deja într-un tipar de deasupra: nu mai trec la altul
+    this.switched = 0;
   }
   ref() {
     return this.nextRef--;

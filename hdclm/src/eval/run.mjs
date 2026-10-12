@@ -11,16 +11,16 @@ import { predError, checkSplit, reconstruction, total } from './metrics.mjs';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '../..');
 
-export function runDir(name) {
-  const dir = join(ROOT, 'runs', name);
+export function runDir(name, tag = process.env.HDCLM_TAG ?? '') {
+  const dir = join(ROOT, 'runs', tag ? `${tag}/${name}` : name);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   return dir;
 }
 
 // modul simplu: tot textul de învățare, apoi somn adânc
-export function trainSimple({ set, seed = 1, overrides = {}, splitOpts = {}, genOpts = {}, dir = null, sleep = true, validate = true }) {
-  const cfg = loadConfig({ seed, ...overrides });
+export function trainSimple({ base = {}, set, seed = 1, overrides = {}, splitOpts = {}, genOpts = {}, dir = null, sleep = true, validate = true }) {
+  const cfg = loadConfig({ seed, ...base, ...overrides });
   const data = generateSet(set, seed, genOpts);
   const split = splitDocs(data, seed, splitOpts);
   if (dir) saveSplit(dir, split);
@@ -42,6 +42,7 @@ export function trainSimple({ set, seed = 1, overrides = {}, splitOpts = {}, gen
 }
 
 export function writeResult(dir, result) {
+  result.base = result.base ?? null;
   writeFileSync(join(dir, 'result.json'), JSON.stringify(result, null, 2) + '\n');
   return result;
 }
