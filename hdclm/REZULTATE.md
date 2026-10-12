@@ -116,3 +116,15 @@ Rezultatul A1 de mai sus rulează mereu ambele măsuri (G1/G2 în tabel = măsur
 3. Pentru A7: deplasarea / copilul sărit (D4).
 4. Abia apoi pașii 6–8.
 
+
+## Măsura amestecată (`--set measure=mix:α`)
+
+`mix:α` = α·termeni + (1−α)·biți / log2(V), adică biții exprimați în „termeni echivalenți”. Cu alternative, sămânța 1:
+
+| măsura | G1 | G2 | A5 | A6 | G4 |
+| --- | --- | --- | --- | --- | --- |
+| termeni, mix 0,75 … 0,25 | 2 tipare, err 1,76 | 10 tipare, err 1,67 | 100% | 60–67% | 0 tipare |
+| mix 0,15 … 0,05 | 2 tipare | 10 tipare | 86,7% | 66,7% | 0 tipare |
+| biți | 2 tipare | 2 tipare, 2 alegeri, err 1,68 | 86,7% | 66,7% | 0 tipare |
+
+Niciun α nu le are pe amândouă: A5 scade înainte să apară tiparul cu două locuri pe G2. Pe G2, abstractizarea nu îmbunătățește predicția (1,67 față de 1,68), pentru că fiecare pereche verb–obiect apare la învățare. Câștigul ei s-ar vedea doar pe perechi verb–obiect nevăzute.

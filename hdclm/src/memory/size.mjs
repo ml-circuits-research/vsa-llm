@@ -65,7 +65,17 @@ export function defSize(view, id, measure = 'terms', bctx = null) {
   throw new Error(`definiție necunoscută ${d.type}`);
 }
 
+// măsura amestecată: 'mix:α' = α·termeni + (1−α)·biți / log2(V)  (biții exprimați în „termeni echivalenți”)
+export function parseMix(measure) {
+  return typeof measure === 'string' && measure.startsWith('mix:') ? Number(measure.slice(4)) : null;
+}
+
 export function total(mem, measure = 'terms') {
+  const alpha = parseMix(measure);
+  if (alpha !== null) {
+    const V = bitsContext(mem).V;
+    return alpha * total(mem, 'terms') + ((1 - alpha) * total(mem, 'bits')) / Math.log2(Math.max(2, V));
+  }
   const view = memoryView(mem);
   const bctx = measure === 'bits' ? bitsContext(mem) : null;
   let t = 0;

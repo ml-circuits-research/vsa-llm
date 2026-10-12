@@ -1,6 +1,6 @@
 // Pasul 4: judecata pachetului. Un tipar rămâne numai dacă scurtează memoria (câștig > 0),
 // socotit împreună cu tot pachetul; scoaterea unui tipar scoate și tot ce depinde de el.
-import { defSize, bitsContext } from '../memory/size.mjs';
+import { defSize, bitsContext, parseMix } from '../memory/size.mjs';
 
 const EPS = 1e-9;
 
@@ -28,7 +28,7 @@ export class Judge {
         });
       this.contrib.set(p.pattern, m);
     }
-    this.bctx = this.measure === 'bits' ? bitsContext(this.mem, { atoms: 0, patterns: ctx.patterns.size }) : null;
+    this.bctx = this.measure !== 'terms' ? bitsContext(this.mem, { atoms: 0, patterns: ctx.patterns.size }) : null;
   }
 
   closure(pid, within) {
@@ -97,24 +97,26 @@ export class Judge {
     return n;
   }
 
-  cost(reg, A) {
+  cost(reg, A, measure = this.measure) {
+    const alpha = parseMix(measure);
+    if (alpha !== null) return alpha * this.cost(reg, A, 'terms') + ((1 - alpha) * this.cost(reg, A, 'bits')) / Math.log2(Math.max(2, this.bctx.V));
     const v = this.view(A);
     let t = 0;
-    for (const u of reg.units) t += defSize(v, u, this.measure, this.bctx);
-    for (const pid of reg.patterns) if (A.has(pid)) t += this.patternSize(pid);
-    for (const p of reg.old) if (this.liveUsage(p, A) > 0) t += this.patternSize(p);
+    for (const u of reg.units) t += defSize(v, u, measure, this.bctx);
+    for (const pid of reg.patterns) if (A.has(pid)) t += this.patternSize(pid, measure);
+    for (const p of reg.old) if (this.liveUsage(p, A) > 0) t += this.patternSize(p, measure);
     for (const c of reg.choices) {
       const ms = v.members(c);
       const users = c > 0 ? this.mem.choiceUsers().get(c) ?? [] : [];
       const exists = users.some((p) => this.liveUsage(p, A) > 0) || [...A].some((pid) => this.contrib.get(pid).has(c));
-      if (exists) t += this.measure === 'terms' ? ms.size : ms.size * Math.log2(Math.max(2, this.bctx.V));
+      if (exists) t += measure === 'terms' ? ms.size : ms.size * Math.log2(Math.max(2, this.bctx.V));
     }
     return t;
   }
 
-  patternSize(pid) {
+  patternSize(pid, measure = this.measure) {
     const d = this.ctx.pattern(pid);
-    if (this.measure === 'terms') return d.items.length + d.items.reduce((s, it) => s + (it.args ? it.args.length : 0), 0);
+    if (measure === 'terms') return d.items.length + d.items.reduce((s, it) => s + (it.args ? it.args.length : 0), 0);
     const lg = (n) => Math.log2(Math.max(2, n));
     return d.items.reduce((s, it) => s + (it.sub !== undefined ? lg(this.bctx.P) + it.args.length * lg(this.bctx.V) : lg(this.bctx.V)), 0);
   }
