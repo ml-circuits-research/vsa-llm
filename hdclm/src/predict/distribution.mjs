@@ -60,6 +60,12 @@ class TempStore {
 
 const addTo = (m, k, v) => m.set(k, (m.get(k) ?? 0) + v);
 
+function mapSum(m) {
+  let s = 0;
+  for (const v of m.values()) s += v;
+  return s;
+}
+
 function normalize(m) {
   let s = 0;
   for (const v of m.values()) s += v;
@@ -145,18 +151,14 @@ export class Predictor {
     const n = prefix.length;
     // sursa 2: votul unităților
     const cands = [];
-    for (const l of levels)
-      for (const v of this.voters[l]) {
-        const c = v.children;
-        if (c.length < n) continue;
-        let s = 1;
-        if (n) {
-          s = 0;
-          for (let i = 0; i < n; i++) s += this.sim.simE(prefix[i], c[i]);
-          s /= n;
-        }
-        cands.push({ id: v.id, score: v.count * Math.exp(cfg.beta * (s - 1)), next: c.length === n ? END : c[n] });
-      }
+    const { list, sums } = this.prefixSums(levels, prefix);
+    for (let j = 0; j < list.length; j++) {
+      const v = list[j];
+      const c = v.children;
+      if (c.length < n) continue;
+      const s = n ? sums[j] / n : 1;
+      cands.push({ id: v.id, score: v.count * Math.exp(cfg.beta * (s - 1)), next: c.length === n ? END : c[n] });
+    }
     cands.sort(byScoreThenId);
     for (const c of cands.slice(0, cfg.n_vote)) addTo(s2, c.next, c.score);
     // sursele 1 și 3: tiparele care se potrivesc cu prefixul
@@ -197,15 +199,51 @@ export class Predictor {
     addTo(s4, UNK, share);
     addTo(s4, END, share);
     // amestecul
-    const srcs = [s1, s2, s3, s4].map(normalize);
+    // O4: sursele nu se mai copiază în Map-uri normalizate; se împarte la sumă direct, cu aceleași operații
+    const srcs = [s1, s2, s3, s4];
+    const tot = srcs.map(mapSum);
     const lam = cfg.lambda;
     let L = 0;
-    srcs.forEach((s, i) => s && (L += lam[i]));
+    tot.forEach((t, i) => t > 0 && (L += lam[i]));
     const D = new Map();
-    srcs.forEach((s, i) => {
-      if (s) for (const [k, p] of s) addTo(D, k, (lam[i] / L) * p);
+    srcs.forEach((src, i) => {
+      const t = tot[i];
+      if (!(t > 0)) return;
+      const f = lam[i] / L;
+      for (const [k, v] of src) addTo(D, k, f * (v / t));
     });
     return D;
+  }
+
+  // O1: sumele asemănărilor prefix–votant, calculate incremental. Pentru prefixul p cu n copii,
+  // sums[j] = Σ_{i<n} simE(p[i], c_j[i]), adunate în aceeași ordine ca înainte (rezultat identic).
+  prefixSums(levels, prefix) {
+    const lk = levels.join('+');
+    let list = this.voterLists?.get(lk);
+    if (!list) {
+      this.voterLists ??= new Map();
+      list = levels.flatMap((l) => this.voters[l]);
+      this.voterLists.set(lk, list);
+    }
+    this.sumCache ??= new Map();
+    const key = `${lk}|${prefix.join(',')}`;
+    let sums = this.sumCache.get(key);
+    if (!sums) {
+      const n = prefix.length;
+      if (n === 0) sums = new Float64Array(list.length);
+      else {
+        const prev = this.prefixSums(levels, prefix.slice(0, n - 1)).sums;
+        sums = new Float64Array(list.length);
+        const x = prefix[n - 1];
+        for (let j = 0; j < list.length; j++) {
+          const c = list[j].children;
+          sums[j] = c.length >= n ? prev[j] + this.sim.simE(x, c[n - 1]) : prev[j];
+        }
+      }
+      if (this.sumCache.size > 20000) this.sumCache.clear();
+      this.sumCache.set(key, sums);
+    }
+    return { list, sums };
   }
 
   firstToken(a) {

@@ -21,13 +21,20 @@ export class ExactSim {
       },
     };
   }
-  key(x, y) {
-    return x < y ? `${x},${y}` : `${y},${x}`;
+  // memoizare pe perechea neordonată: Map de Map-uri cu chei numerice (fără șiruri temporare)
+  get(cache, x, y) {
+    const a = x < y ? x : y, b = x < y ? y : x;
+    return cache.get(a)?.get(b);
+  }
+  put(cache, x, y, v) {
+    const a = x < y ? x : y, b = x < y ? y : x;
+    let m = cache.get(a);
+    if (!m) cache.set(a, (m = new Map()));
+    m.set(b, v);
   }
   simC(x, y) {
     if (x === y) return 1;
-    const k = this.key(x, y);
-    let v = this.cC.get(k);
+    let v = this.get(this.cC, x, y);
     if (v !== undefined) return v;
     const s = this.src;
     if (s.isToken(x) || s.isToken(y)) v = 0;
@@ -41,13 +48,12 @@ export class ExactSim {
         v = sum / Math.sqrt(cx.length * cy.length);
       }
     }
-    this.cC.set(k, v);
+    this.put(this.cC, x, y, v);
     return v;
   }
   simE(x, y) {
     if (x === y) return 1;
-    const k = this.key(x, y);
-    let v = this.cE.get(k);
+    let v = this.get(this.cE, x, y);
     if (v !== undefined) return v;
     const Cx = this.src.choicesOf(x), Cy = this.src.choicesOf(y);
     let common = 0;
@@ -57,7 +63,7 @@ export class ExactSim {
     }
     const w2 = this.w2;
     v = (this.simC(x, y) + w2 * common) / Math.sqrt((1 + w2 * Cx.length) * (1 + w2 * Cy.length));
-    this.cE.set(k, v);
+    this.put(this.cE, x, y, v);
     return v;
   }
 }

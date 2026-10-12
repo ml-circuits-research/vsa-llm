@@ -47,3 +47,25 @@ Toți timpii sunt de pe mașina de lucru (container cloud, Node 22) și sunt doa
 | O9 | **Vectori calculați o singură dată pe versiune** și împărțiți între somn și predicție (acum fiecare context și fiecare predictor își face propria vedere) | mediu, cu vectori | niciunul |
 
 Ordinea propusă: întâi cele fără efect asupra rezultatelor (O1, O3, O4, O9, O6). Fiecare vine cu un test care arată că fișierele de ieșire rămân identice octet cu octet. Apoi, înaintea textului adevărat, cele care schimbă rezultatele (O2, O5, O7 cu LSH), fiecare măsurată față de varianta completă.
+
+## Optimizări aplicate (fără efect asupra rezultatelor)
+
+Setul de referință: `node src/cli.mjs experiment A,G2P,G10`, strategia exactă. După fiecare pas s-a calculat amprenta SHA-256 a celor 21 de fișiere de ieșire. **Amprenta a rămas aceeași la fiecare pas:** `0cb3e6e80bd53720`.
+
+| Pas | Timp | Față de început |
+| --- | --- | --- |
+| referință | 35,8 s (B2 rula în paralel pe un nucleu) | |
+| O3: chei numerice în memoizarea asemănărilor | 28,0 s | −22% |
+| O1: sume incrementale în vot | 28,8 s | fără câștig pe G (prefixe scurte); păstrat pentru paragrafele lungi de pe text adevărat |
+| O4: sursele nu se mai copiază în Map-uri normalizate | **26,0 s** | **−27%** |
+
+Profilul după acești pași (A7 + G10, 21 s): **68% din timp e verificarea pe textul de validare din somn**, adică predicția rulată pe tot textul de validare la fiecare împărțire a pachetului. Din timpul predicției, votul (bucla peste toți votanții și sortarea lor) ia ~20%, iar căutările în cache-ul de asemănări ~19%.
+
+**Ce urmează și de ce nu e „gratuit”.** Câștigurile mari de acum înainte schimbă rezultatele, deci trebuie măsurate față de varianta completă:
+- **O2:** un index pentru votanți, ca să nu se compare cu fiecare unitate;
+- **O5:** un eșantion fix din textul de validare;
+- **O7** (cu vectori): biți împachetați și un index aproximativ.
+
+**O6** (trecerea de alternative fără copii complete ale memoriei) ar trebui să dea rezultate identice, dar e mai mult cod.
+
+**Pe text adevărat, fără O2 și O5, predicția nu scalează:** votul compară fiecare token cu toate unitățile nivelului. La 100.000 de tokeni de învățare înseamnă ~10⁴ unități × 10⁵ predicții de validare.
