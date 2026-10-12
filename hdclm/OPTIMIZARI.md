@@ -14,6 +14,8 @@ Toți timpii sunt de pe mașina de lucru (container cloud, Node 22) și sunt doa
 | B5, bipolar D = 4096 | 75 s | ~12× față de exact |
 | B5, phasor D = 4096 | 145 s | ~24× față de exact |
 | blocul A complet, bipolar D = 4096 | 312 s | A7 225 s |
+| B2 / B3 / B4 | 146 s (4 fire) / 48 s / 36 s | |
+| `nearest` printre 100.000 de vectori, bipolar D = 4096 | 2,1 s | ~21 s la 1 milion; 16 GB |
 
 ## Unde se duce timpul (profil CPU, A7 exact, 16 s)
 

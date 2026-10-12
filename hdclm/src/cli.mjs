@@ -21,7 +21,7 @@ if (cmd === 'experiment') {
   for (const e of list) {
     const mod = await import(pathToFileURL(join(here, 'eval/experiments', `${e}.mjs`)).href);
     const t0 = performance.now();
-    const r = mod.run({ seed, base });
+    const r = await mod.run({ seed, base });
     r.base = base;
     console.log(`${e}: ${r.decision}   (${((performance.now() - t0) / 1000).toFixed(1)} s)`);
   }

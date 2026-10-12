@@ -122,3 +122,19 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
   3. **Fragmentare:** 77 de tipare de propoziție, câte unul pe verb, și doar 3 reguli de paragraf, pentru 133 de povești.
 - **Revizuirea lui D9.** Deplasarea nu mai poate aștepta textul adevărat: e necesară deja pentru întrebări cu un număr variabil de fapte. Se programează după blocul B, ca etapă separată, cu un set de control nou (G12) rulat orb după reparație. Pentru punctul 2 (corespondențe între forme) nu există încă mecanism; e o problemă deschisă, de discutat.
 - **Consecință pentru afirmații.** Rezultatele bune de pe G7–G10 arată că mecanismul găsește reguli de legare când faptele au poziții fixe și valorile se repetă identic. Nu arată încă generalitate pe structuri variabile.
+
+## D11. Blocul B: strategia bipolară, D = 4096, θ_group = 0,17; implicit rămâne strategia exactă
+
+- **Dovezi:**
+  - **B1:** bipolar și phasor trec H1–H8 la D = 1024, 4096 și 16384. Binary iese: pică H5 și H6 (majoritatea rotunjește), plus H8 la D ≤ 4096.
+  - **B2:** la D = 4096 și M = 10.000, K ajunge la 64 (bipolar) și 128 (phasor), deci K = 16 e susținut. Prima rulare avea puține decodări pe celulă; vezi rularea țintită din REZULTATE.md.
+  - **B3:** pragul separă perfect neînrudite de „toți copiii comuni în afară de 1–2” la orice D. Depinde de numărul de copii: 0,17 / 0,30 / 0,39 pentru n = 3 / 5 / 8, la D = 4096.
+  - **B4:** bipolar e cel mai ieftin (16 KB pe vector la D = 4096). O căutare printre 1 milion de unități ar dura ~21 s.
+  - **B5:** bipolar și phasor dau aceleași decizii și aceleași totaluri ca forma exactă pe A1, A3, A5, A6 și G2P.
+- **Ales.**
+  - Strategia pentru vectori: bipolar, D = 4096.
+  - θ_group = 0,17, cea mai mică valoare din B3, care nu pierde unitățile scurte; pentru unitățile lungi e mai permisivă, dar grupul se verifică oricum pe forma exactă.
+  - K rămâne 16, deși B2 permite 64: principiul 1, iar M real (vocabularul + unitățile) va fi mult mai mare decât 10.000.
+- **Implicit rămâne `strategy: "exact"`.** Nu e o abatere de la rezultat: B5 arată că deciziile sunt identice, iar specificația cere ca strategia exactă să ruleze ca referință alături. Motivul e timpul (~12× mai lent cu vectori). Se trece pe bipolar ca implicit după optimizarea O7 (biți împachetați).
+- **Consecințe.** Fără O7 și fără un index, căutarea cu vectori nu scalează la text adevărat (21 s pe căutare la 1 milion de unități, 16 GB).
+- **Revizuire.** După O7; la blocul C, cu M real; dacă K = 64 se dovedește necesar pe text adevărat (experimentul C1).

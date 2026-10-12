@@ -7,7 +7,7 @@
   "m_min": 2,
   "theta_accept": 0.5,
   "theta_merge": 0.5,
-  "theta_group": null,
+  "theta_group": 0.17,
   "d_max": 2,
   "measure": "bits",
   "W": 10000,

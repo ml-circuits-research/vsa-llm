@@ -208,7 +208,13 @@ Regulile găsite, citite din memorie:
 
 `node src/cli.mjs experiment G11`: **pică**. 3,7% / 0% / 0% pe semințele 1–3; fără somn 0%. Predicția de top după întrebare este „The”, adică începutul unui fapt nou. Cauzele (deplasarea, forma verbului, fragmentarea) sunt în DECIZII.md, D10. Rezultatul rămâne consemnat așa; o reparație ulterioară îl va face „văzut”.
 
-## Blocul B, pasul 6 (în lucru)
+## Blocul B, pasul 6
 
 - **B1** (`node src/cli.mjs experiment B1`, 99 s): bipolar și phasor trec H1–H8 la D = 1024, 4096 și 16384. **Binary iese**: pică H5 și H6 (majoritatea rotunjește sumele, greșeala 1 din specificație) și H8 la D ≤ 4096. D = 65536 nu a fost rulat.
 - **Exact față de vectori** (`test/similarity.test.mjs`): pe G7 după somn, |sim(comp x, comp y) − simC(x, y)| și aceeași diferență pentru enr sunt sub t = 0,078, la bipolar și phasor, D = 4096. Un bug găsit pe drum: etichetele nenormalizate făceau ca „.” să acopere numele în sume (abatere 0,40). Reparat.
+- **B2** (capacitatea; `experiment B2`, 146 s pe 4 fire): eroare de recunoaștere a unui copil sub 1% până la K = 24 / 64 / ≥ 256 (bipolar, D = 1024 / 4096 / 16384) și K = 48–64 / 128 / ≥ 256 (phasor). M = 100.000 de candidați nu a fost rulat. **Rezervă:** la M = 10.000 s-au făcut doar ~20–80 de decodări pe valoare.
+- **B3** (pragul de grupare; 48 s): separare fără nicio eroare observată, la orice D încercat; θ = 0,17 / 0,30 / 0,39 pentru 3 / 5 / 8 copii (D = 4096). Asemănările măsurate urmează valorile exacte (n − j)/n.
+- **B4** (costul; 36 s): bipolar e cel mai ieftin. La D = 4096 ocupă 16 KB pe vector și o căutare durează ~2,1 s printre 100.000 de vectori, deci ~21 s printre 1 milion (extrapolat). Phasor e de 2× mai scump.
+- **B5** (225 s): bipolar și phasor la D = 4096 dau **aceleași decizii și aceleași totaluri** ca strategia exactă pe A1, A3, A5, A6, G2P (de exemplu, A6: 1236,385 la toate trei). Sunt de ~12× (bipolar) și ~24× (phasor) mai lente.
+- **Decizia (DECIZII.md, D11):** bipolar, D = 4096, θ_group = 0,17. Implicit rămâne strategia exactă până la optimizarea O7.
+- Corectură: B2 folosea `node:child_process`, care nu este permis de specificație (secțiunea 4). A fost trecut pe `node:worker_threads`, cu rezultat determinist.
