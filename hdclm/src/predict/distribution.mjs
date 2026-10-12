@@ -145,7 +145,7 @@ export class Predictor {
   }
 
   // distribuția peste copiii posibili (și END) ai unei unități deschise
-  childDistribution(levels, prefix) {
+  childDistribution(levels, prefix, opts = {}) {
     const { mem, cfg } = this;
     const s1 = new Map(), s2 = new Map(), s3 = new Map();
     const n = prefix.length;
@@ -190,6 +190,17 @@ export class Predictor {
     const lam = cfg.lambda;
     let L = 0;
     tot.forEach((t, i) => t > 0 && (L += lam[i]));
+    if (opts.split) {
+      // sursele 1–3 în D; sursa 4 (constantă pe nivel) rămâne separată, cu factorul ei
+      const D = new Map();
+      for (let i = 0; i < 3; i++) {
+        const t = tot[i];
+        if (!(t > 0)) continue;
+        const f = lam[i] / L;
+        for (const [k, v] of srcs[i]) addTo(D, k, f * (v / t));
+      }
+      return { D, f4: tot[3] > 0 ? lam[3] / L / tot[3] : 0 };
+    }
     const D = new Map();
     srcs.forEach((src, i) => {
       const t = tot[i];
@@ -198,6 +209,62 @@ export class Predictor {
       for (const [k, v] of src) addTo(D, k, f * (v / t));
     });
     return D;
+  }
+
+  // sursa 4 agregată pe primul token (fără END), o dată pe nivel: Map(token -> pondere brută)
+  s4Agg(levels) {
+    const key = levels.join('+');
+    this.s4AggCache ??= new Map();
+    let a = this.s4AggCache.get(key);
+    if (!a) {
+      const s4 = this.freqSource(levels);
+      const m = new Map();
+      for (const [k, v] of s4) if (k !== END) addTo(m, this.firstToken(k), v);
+      a = { m, end: s4.get(END) ?? 0 };
+      this.s4AggCache.set(key, a);
+    }
+    return a;
+  }
+
+  // P „leneș”: aceeași distribuție ca P, dar sursa 4 rămâne ca termeni c · agregat(nivel).
+  // Matematic identică; adunările se fac în altă ordine (diferențe de ordinul 1e-15).
+  Plazy(stack, i, c = 1, out = { small: new Map(), parts: [] }) {
+    const e = stack[i];
+    const { D, f4 } = this.childDistribution(e.levels, e.prefix, { split: true });
+    let pe = 0;
+    for (const [a, p] of D) {
+      if (a === END) pe += p;
+      else addTo(out.small, this.firstToken(a), c * p);
+    }
+    if (f4 > 0) {
+      const ag = this.s4Agg(e.levels);
+      out.parts.push([c * f4, ag.m]);
+      pe += f4 * ag.end;
+    }
+    if (pe > 0) {
+      if (i === stack.length - 1) addTo(out.small, EOT, c * pe);
+      else {
+        const closed = this.closeUnit(e);
+        const st = stack.map((x, j) => (j < i + 1 ? { ...x, prefix: [] } : j === i + 1 ? { ...x, prefix: [...x.prefix, closed] } : x));
+        this.Plazy(st, i + 1, c * pe, out);
+      }
+    }
+    return out;
+  }
+  lazyGet(lz, key) {
+    let p = lz.small.get(key) ?? 0;
+    for (const [c, m] of lz.parts) p += c * (m.get(key) ?? 0);
+    return p;
+  }
+  // probabilitatea tokenului dat (text) după prefix, fără distribuția completă
+  nextProb(tokens, text) {
+    const st = this.stackFor(tokens);
+    let i = st.findIndex((e) => e.prefix.length > 0);
+    if (i < 0) i = st.length - 1;
+    const lz = this.Plazy(st, i);
+    if (text === EOT) return this.lazyGet(lz, EOT);
+    const id = this.mem.tokenId(text);
+    return this.lazyGet(lz, id === undefined ? UNK : id);
   }
 
   // O1: sumele asemănărilor prefix–votant, calculate incremental. Pentru prefixul p cu n copii,

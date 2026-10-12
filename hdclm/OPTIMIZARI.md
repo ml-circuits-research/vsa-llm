@@ -76,3 +76,23 @@ Profilul după acești pași (A7 + G10, 21 s): **68% din timp e verificarea pe t
 | --- | --- | --- |
 | sursa 4 memorată | frecvența și partea egală pe vocabular nu depind de prefix; se calculează o dată pe nivel, nu la fiecare token | setul de referință: 26,0 → 22,8 s; amprenta identică |
 | votul cu index exact | simE(x, y) > 0 ⟺ x și y au o trăsătură comună (atomul, o alegere, sau recursiv pe aceeași poziție). Asemănarea se calculează doar pentru votanții cu trăsături comune. Cei cu s = 0 au toți aceeași greutate și se iau dintr-o listă sortată o dată. Activ doar cu strategia exactă | G: fără câștig (aproape toți votanții au trăsături comune); **TinyStories 10k tokeni: predicția 4,5 → 2,2 s**, eroare identică (12,468698646527113 în ambele variante); amprenta identică |
+
+## Optimizări aplicate, partea a treia: predicția fără distribuția completă
+
+- **Problema.** Somnul complet pe 3k tokeni de TinyStories dura 38 s, față de 0,09 s fără validare și fără alternative. 82% din timp era validarea, iar în ea, agregarea distribuțiilor: la fiecare nivel, sursa 4 acoperă tot vocabularul și se aduna token cu token.
+- **Ce s-a schimbat.**
+  - Sursa 4, agregată pe primul token, se calculează o dată pe nivel.
+  - Eroarea de predicție cere doar probabilitatea tokenului corect, deci se calculează direct: p = termenii mici + Σ coeficient · agregat(nivel).
+- **Efect asupra rezultatelor.** Matematic același; adunările se fac în altă ordine:
+  - TinyStories, 524 de predicții: abaterea relativă maximă 1,1·10⁻¹⁵;
+  - setul de referință: amprenta se schimbă, dar toate cele 7967 de numere din cele 21 de fișiere sunt egale cu abatere relativă sub 5·10⁻¹⁶; memoriile, textele și deciziile sunt identice.
+- **Timp.** Somnul complet pe 3k tokeni: **38,1 → 15,3 s** (totalul final identic, 29523,606). Setul de referință: 22,4 s.
+
+## Constatări de la S1 (codul vechi, înainte de această optimizare)
+
+| N | Somn fără validare și fără alternative | Somn complet | Eroare înainte → după somn |
+| --- | --- | --- | --- |
+| 3.108 | 0,09 s | 37,9 s | 8,331 → 8,345 (fără validare); 8,315 (complet) |
+| 10.143 | 0,71 s | (oprit după 3,5 min, ca să fie reluat cu codul nou) | 7,812 → 7,846 (fără validare) |
+
+**Pe text adevărat, somnul fără validare înrăutățește puțin predicția.** Asta e o constatare de mecanism (blocurile D și E), nu de viteză.

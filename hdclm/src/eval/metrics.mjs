@@ -11,8 +11,7 @@ export function predError(mem, cfg, docs) {
   for (const d of docs) {
     const toks = tokenize(d.text, mem.tokenMode ?? 'word');
     for (let i = 0; i <= toks.length; i++) {
-      const dist = pred.nextToken(toks.slice(0, i));
-      const p = pred.prob(dist, i < toks.length ? toks[i].text : EOT);
+      const p = pred.nextProb(toks.slice(0, i), i < toks.length ? toks[i].text : EOT);
       bits += -Math.log2(p);
       n++;
     }
