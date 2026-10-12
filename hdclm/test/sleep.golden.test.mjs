@@ -100,8 +100,15 @@ test('G7 implicit: o singură regulă generală [Fapt(S1,S2), Întrebare(S2), R�
 
 test('G8 implicit: regula cu doi pași, 100% pe combinațiile puse deoparte', () => {
   const r = trainSimple({ set: 'G8' });
-  const rules = rulesOf(r.mem, 4);
-  assert.equal(rules.length, 1);
-  assert.equal(r.mem.atoms[rules[0]].def.items.length, 4);
+  // regula cea mai folosită este cea generală, cu patru propoziții cuibărite
+  const rules = rulesOf(r.mem, 4).sort((a, b) => r.mem.usage(b) - r.mem.usage(a));
+  const d = r.mem.atoms[rules[0]].def;
+  assert.equal(d.items.length, 4);
+  assert.ok(d.items.every((it) => it.sub !== undefined));
+  assert.equal(answerAccuracy(r.mem, r.cfg, r.split.test.filter((x) => x.heldout)).acc, 1);
+});
+
+test('G10 (set de control): regulile leagă întrebarea de faptul potrivit, 100%', () => {
+  const r = trainSimple({ set: 'G10' });
   assert.equal(answerAccuracy(r.mem, r.cfg, r.split.test.filter((x) => x.heldout)).acc, 1);
 });

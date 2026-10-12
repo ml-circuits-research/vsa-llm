@@ -124,6 +124,28 @@ function g2p() {
   return mk('G2P', docs, { heldPairs: G2P_HELD });
 }
 
+// G10: set de control, nefolosit la proiectarea mecanismului. Alte cuvinte, altă structură:
+// două fapte și o întrebare despre unul dintre ele (ales la întâmplare). Răspunsul cere legarea
+// numelui din întrebare de faptul potrivit, nu de poziție.
+const P10 = ['Mira', 'Tom', 'Lia', 'Bob', 'Eva', 'Max', 'Zoe', 'Sam'];
+const C10 = ['Oslo', 'Rome', 'Lima', 'Kyiv', 'Doha', 'Riga', 'Baku', 'Accra'];
+function g10(R) {
+  const docs = [];
+  for (let n = 0; n < 240; n++) {
+    const i1 = R.int(8);
+    let i2 = R.int(7);
+    if (i2 >= i1) i2++;
+    const c1 = R.int(8), c2 = R.int(8);
+    const ask = R.int(2); // 0: primul, 1: al doilea
+    const [ip, ic] = ask ? [i2, c2] : [i1, c1];
+    const prompt = `${P10[i1]} lives in ${C10[c1]}. ${P10[i2]} lives in ${C10[c2]}. Where does ${P10[ip]} live?`;
+    // combinație pusă deoparte: persoana întrebată cu orașul ei (regulă ciclică pe 8)
+    const held = (((ic - ip) % 8) + 8) % 8 < 2;
+    docs.push({ text: `${prompt} ${C10[ic]}.`, heldout: held, meta: { prompt, answer: C10[ic], ask, person: P10[ip] } });
+  }
+  return mk('G10', docs);
+}
+
 export function generateSet(name, seed = 1, opts = {}) {
   const R = rng(seed);
   switch (name) {
@@ -137,6 +159,7 @@ export function generateSet(name, seed = 1, opts = {}) {
     case 'G7': return g7(opts);
     case 'G8': return g8(opts);
     case 'G9': return g9(opts, R);
+    case 'G10': return g10(R);
     default: throw new Error(`set necunoscut ${name}`);
   }
 }

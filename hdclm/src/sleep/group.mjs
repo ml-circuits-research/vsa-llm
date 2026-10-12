@@ -64,7 +64,12 @@ export function candidateGroups(ctx, units, level) {
       // forma copiilor: o unitate contează prin nivelul și lungimea ei, un token prin el însuși
       const sig = ch.map((c) => (mem.isUnit(c) ? `u${mem.level(c)}:${mem.children(c).length}` : `a${c}`));
       if (sig.some((x) => x[0] === 'u')) {
-        const key = `${level}|${n}|A|${sig.join(',')}`;
+        // structura repetițiilor: care valori (ale locurilor copiilor, sau copiii-token) se repetă, și unde.
+        // Unități cu aceeași formă dar cu alte legături nu intră în același grup.
+        const vals = ch.flatMap((c) => ctx.interp(c)?.fills ?? [c]);
+        const first = new Map();
+        const eq = vals.map((v, i) => (first.has(v) ? first.get(v) : (first.set(v, i), i)));
+        const key = `${level}|${n}|A|${sig.join(',')}|${eq.join(',')}`;
         let b = buckets.get(key);
         if (!b) buckets.set(key, (b = { key, n, F: null, abstract: true, units: [] }));
         b.units.push(u);

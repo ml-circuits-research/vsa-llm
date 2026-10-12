@@ -188,3 +188,18 @@ Regulile găsite, citite din memorie:
    - seturile de test sunt mici (15 povești puse deoparte);
    - generarea după răspuns tot nu pune punctul: locurile puse de unitățile de deasupra nu sunt implementate la predicție.
 5. **Termenii, cu aceleași reparații:** A5 și A6 trec, dar A1 și G2P pică. Concluzia din etapa 1 rămâne.
+
+
+## Etapa 4 (în lucru): verificarea că nu am croit mecanismul pe G7, și A7
+
+**Nimic nu e hardcodat.** În mecanism nu apare niciun cuvânt și niciun nume de set (verificat cu grep). Tiparele și regulile ies din date. Singura cunoaștere dată rămâne tabelul de granițe.
+
+**Riscul real era ca designul să fie croit pe G7.** Pentru asta am adăugat **G10, un set de control** cu alte cuvinte și altă structură: două fapte și o întrebare despre *unul dintre ele*. De exemplu: „Mira lives in Oslo. Tom lives in Rome. Where does Tom live? Rome.” Rulare: `node src/cli.mjs experiment G10`.
+
+- **Prima rulare, fără nicio schimbare: pică** (56% / 20% / 45% pe semințele 1–3). Gruparea abstractă punea în același grup poveștile cu întrebare despre primul fapt și pe cele despre al doilea. Pe un grup amestecat nu există o legare comună.
+- **Reparația (generală):** cheia grupării abstracte conține și **structura repetițiilor**, adică ce valori se repetă și pe ce poziții. Un loc legat înseamnă exact o valoare care se repetă, deci nu e cunoaștere de limbă.
+- **După reparație: G10 100% pe toate cele trei semințe** (fără somn 20–52%; în termeni 36–56%). Regulile găsite sunt `[Fapt(S1,S2), Fapt(S3,S4), Unde(S1), Răspuns(S2)]` și `[… Unde(S3), Răspuns(S4)]`, plus variante pentru poveștile în care ambele fapte au, întâmplător, același oraș.
+- **Atenție:** după reparație, G10 nu mai este nevăzut. Pentru o verificare curată trebuie un alt set de control (G11), neatins până la rulare.
+- Blocul A rămâne neschimbat pe semințele 1–3. Pe G8 apare, pe lângă regula generală (54 de povești), o regulă mică pentru 2 povești cu o repetiție întâmplătoare.
+
+**A7 (G9):** regulile se fragmentează: câte una pentru fiecare număr de propoziții intercalate și pentru fiecare formă a lor. Rezultat: > 90% până la 1–3 propoziții. Vezi decizia propusă mai jos.
