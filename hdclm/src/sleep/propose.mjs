@@ -1,4 +1,5 @@
 // Pasul 3: din grup în tipar. Coloane -> ridicare -> legare -> alegeri -> tipar și aplicări.
+import { interpretAs } from '../memory/match.mjs';
 
 const sameCol = (a, b) => a.length === b.length && a.every((x, i) => x === b[i]);
 
@@ -43,53 +44,64 @@ function findIdentical(ctx, level, sig) {
   return null;
 }
 
-// o coloană se poate ridica la tiparul q dacă toate valorile ei sunt aplicări ale lui q. Cu shadowLift,
-// dacă valorile sunt aplicări ale unor tipare diferite, se caută un grup-umbră (pierdut la atribuirea
-// lacomă, pe nivelul de dedesubt) care le cuprinde pe toate: valorile pot trece la tiparul lui.
-export function findLift(ctx, col) {
+// o coloană se poate ridica la tiparul q dacă toate valorile ei sunt aplicări ale lui q. Cu multiInterp,
+// ajunge ca fiecare valoare să se poată citi ca q (rescrierea ei principală poate fi alt tipar).
+export function findLift(ctx, col, { probe = false } = {}) {
   const ints = col.map((v) => ctx.interp(v));
-  const q = ints[0]?.pattern;
-  if (q !== undefined && ints.every((x) => x && x.pattern === q)) return { q };
-  if (!ctx.cfg.shadowLift) return null;
-  const vals = [...new Set(col)];
-  if (!vals.every((v) => ctx.mem.isUnit(v) && !ctx.locked.has(v) && !nestedInMemory(ctx.mem, v))) return null;
-  for (const g of ctx.shadows[ctx.mem.level(vals[0])] ?? []) if (vals.every((v) => g.unitSet.has(v))) return { shadow: g, vals };
-  return null;
+  const q0 = ints[0]?.pattern;
+  if (q0 !== undefined && ints.every((x) => x && x.pattern === q0)) return { q: q0, fills: ints.map((x) => x.fills) };
+  if (!ctx.cfg.multiInterp || !ctx.mem.isUnit(col[0])) return null;
+  const n = ctx.mem.children(col[0]).length;
+  const lvl = ctx.mem.level(col[0]);
+  // candidați: tiparele principale ale valorilor, cele mai folosite întâi
+  const votes = new Map();
+  for (const x of ints) if (x) votes.set(x.pattern, (votes.get(x.pattern) ?? 0) + 1);
+  const cands = [...ctx.mem.livePatterns(lvl), ...[...ctx.patterns.values()].filter((p) => p.level === lvl).map((p) => p.ref)]
+    .filter((q) => ctx.pattern(q).items.length === n)
+    .sort((a, b) => (votes.get(b) ?? 0) - (votes.get(a) ?? 0) || a - b);
+  const env = ctx.env();
+  for (const q of cands) {
+    const fills = col.map((v) => interpretAs(env, v, q));
+    if (fills.every(Boolean)) return { q, fills, move: true };
+  }
+  // niciun tipar nu acoperă coloana: se propune unul nou din valorile ei (fără să li se mute rescrierea principală)
+  const vals = [...new Set(col)].sort((a, b) => a - b);
+  if (vals.length < ctx.cfg.m_min || !vals.every((v) => ctx.mem.isUnit(v) && ctx.mem.children(v).length === n)) return null;
+  const chs = vals.map((v) => ctx.mem.children(v));
+  const F = [...Array(n).keys()].filter((i) => chs.some((c) => c[i] !== chs[0][i]));
+  if (!F.length || F.length >= n || F.length > ctx.cfg.f_max) return null;
+  if (!probe) for (const v of vals) detach(ctx, v);
+  const q = probe ? null : proposeGroup(ctx, { n, F, units: vals, key: `lift|${vals.join(',')}` }, lvl);
+  if (probe) return { q: null, probe: F.length };
+  if (q === null) return null;
+  const fills = col.map((v) => interpretAs(ctx.env(), v, q));
+  return fills.every(Boolean) ? { q, fills, move: false } : null;
 }
 
-function nestedInMemory(mem, u) {
-  return mem.parents(u).some(([p, pos]) => {
-    const d = mem.atoms[p].def;
-    return d.type === 'APP' && mem.atoms[d.pattern].def.items[pos].sub !== undefined;
+// scoate unitatea din propunerea în care era rescrisă în această trecere
+function detach(ctx, v) {
+  const r = ctx.rewriteOf.get(v);
+  if (r === undefined) return;
+  ctx.proposals.get(r).units.delete(v);
+  ctx.rewriteOf.delete(v);
+}
+
+// valorile citite prin q trec principal la q (ceilalți le pot citi în continuare prin interpretări multiple)
+function moveTo(ctx, q, col, fills) {
+  const lvl = ctx.mem.level(col[0]);
+  ctx.proposal(q, q < 0, lvl);
+  col.forEach((v, r) => {
+    if (ctx.interp(v)?.pattern === q) return;
+    detach(ctx, v);
+    ctx.addRewrite(q, v, fills[r]);
   });
-}
-
-// valorile trec la tiparul grupului-umbră; întoarce false (și refacerea stării) dacă nu se poate
-function materialize(ctx, lift) {
-  const { shadow, vals } = lift;
-  const sorted = vals.slice().sort((a, b) => a - b);
-  const saved = sorted.map((v) => [v, ctx.rewriteOf.get(v), ctx.rewriteOf.has(v) ? ctx.proposals.get(ctx.rewriteOf.get(v)).units.get(v) : null]);
-  for (const [v, r] of saved) if (r !== undefined) {
-    ctx.proposals.get(r).units.delete(v);
-    ctx.rewriteOf.delete(v);
-  }
-  const pid = proposeGroup(ctx, { ...shadow, units: sorted }, ctx.mem.level(sorted[0]));
-  if (pid !== null) {
-    ctx.switched += sorted.length;
-    return true;
-  }
-  for (const [v, r, f] of saved) if (r !== undefined) {
-    ctx.proposals.get(r).units.set(v, f);
-    ctx.rewriteOf.set(v, r);
-  }
-  return false;
 }
 
 export function propose(ctx, groups, level) {
   for (const g of groups) proposeGroup(ctx, g, level);
 }
 
-export function proposeGroup(ctx, g, level) {
+export function proposeGroup(ctx, g, level, { rewrite = true } = {}) {
   const { mem, cfg } = ctx;
   {
     const U = g.units;
@@ -113,14 +125,13 @@ export function proposeGroup(ctx, g, level) {
       }
       const col = ch.map((c) => c[i]);
       // ridicare: toate valorile sunt aplicări ale aceluiași tipar q
-      let lift = cfg.d_max >= 1 ? findLift(ctx, col) : null;
-      if (lift?.shadow && !materialize(ctx, lift)) lift = null;
-      const ints = col.map((v) => ctx.interp(v));
-      const q = ints[0]?.pattern;
-      if (lift && q !== undefined && ints.every((x) => x && x.pattern === q)) {
-        for (const v of col) ctx.locked.add(v);
+      const lift = cfg.d_max >= 1 ? findLift(ctx, col) : null;
+      if (lift) {
+        const q = lift.q;
+        if (lift.move) moveTo(ctx, q, col, lift.fills);
+        if (ctx.proposals.has(q)) deps.add(q);
         const qd = ctx.pattern(q);
-        spec.push({ sub: q, argCols: qd.slots.map((_, j) => ints.map((x) => x.fills[j])) });
+        spec.push({ sub: q, argCols: qd.slots.map((_, j) => lift.fills.map((f) => f[j])) });
         for (const v of col) if (ctx.rewriteOf.has(v)) deps.add(ctx.rewriteOf.get(v));
         if (q < 0) deps.add(q);
       } else spec.push({ col });
@@ -163,7 +174,12 @@ export function proposeGroup(ctx, g, level) {
       slotOrder = seen;
       ctx.proposal(pid, pid < 0 ? true : false, level);
     }
-    U.forEach((u, r) => ctx.addRewrite(pid, u, slotOrder.map((k) => cols[k][r]), [...deps]));
+    if (rewrite) U.forEach((u, r) => ctx.addRewrite(pid, u, slotOrder.map((k) => cols[k][r]), [...deps]));
+    else {
+      // tipar folosit doar cuibărit: valorile lui intră în alegeri, ca să se poată citi prin el
+      U.forEach((u, r) => slotOrder.forEach((k, i) => ctx.addToChoice(ctx.accepts(ctx.pattern(pid).slots[i]), cols[k][r])));
+      for (const d of deps) ctx.proposals.get(pid).deps.add(d);
+    }
     return pid;
   }
 }

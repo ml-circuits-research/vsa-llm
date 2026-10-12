@@ -16,7 +16,8 @@ rest.forEach((a, i) => {
 });
 
 if (cmd === 'experiment') {
-  const list = what === 'A' ? ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7'] : what.split(',');
+  const BLOCK_A = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7'];
+  const list = what.split(',').flatMap((x) => (x === 'A' ? BLOCK_A : [x]));
   for (const e of list) {
     const mod = await import(pathToFileURL(join(here, 'eval/experiments', `${e}.mjs`)).href);
     const t0 = performance.now();

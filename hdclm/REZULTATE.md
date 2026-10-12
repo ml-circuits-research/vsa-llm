@@ -1,5 +1,7 @@
 # hdclm: implementare și rezultatele blocului A
 
+> **Starea curentă (etapa 2 din PLAN.md încheiată):** cu configurarea implicită (biți, alternative, interpretări multiple, grupare abstractă), A1–A6 trec pe semințele 1, 2 și 3; A7 trece parțial. Detalii în secțiunea „Etapa 2”, la sfârșit. Secțiunile intermediare descriu drumul până aici, cu configurările de atunci.
+
 Implementarea specificației „Model de limbaj HDC din text (v1.0)”, pașii 1–5 din secțiunea 19, cu strategia exactă (fără vectori). Codul stă în acest director și respectă regulile din secțiunea 4: Node.js ≥ 20, fișiere `.mjs`, nicio dependență, `rng(seed)` peste tot.
 
 ## Cum se reia pe calculator
@@ -78,7 +80,7 @@ Testele acoperă invarianții I1–I8, I10–I12 și I15, cazurile de aur (G1: 2
 | `alternatives` | După ce trecerile obișnuite nu mai scad totalul, o *trecere de alternative* regrupează toate unitățile unui nivel, inclusiv cele rescrise deja. Fiecare grup se aplică pe o copie a memoriei, iar câștigul se măsoară pe totalul real (forma exactă). Se păstrează cel mai bun, dacă scade totalul; se repetă până nu mai găsește niciunul. Unitățile cuibărite într-o regulă nu se mută. |
 | `altCandidates` | câte grupuri se încearcă pe un nivel (200) |
 | `altLookahead` | judecă fiecare alternativă după încă o trecere de somn pe copie (să vadă ce se formează deasupra) |
-| `shadowLift` | la ridicare, dacă valorile unei coloane sunt aplicări ale unor tipare diferite, caută un grup pierdut la atribuirea lacomă care le cuprinde pe toate și le mută la tiparul lui |
+| `shadowLift` | (scos în etapa 2, înlocuit de `multiInterp`) la ridicare, muta unitățile la un grup pierdut la atribuirea lacomă |
 
 ### Consecințe pentru toată lumea (și cu opțiunile oprite)
 
@@ -142,3 +144,47 @@ G2P = G2 fără perechile „writes the poem” și „reads the note” la înv
 Concluzie: termenii învață că perechile nevăzute nu există. Biții creează categoria „obiect” și generalizează (−0,24 biți/token), cu un cost mic pe ce s-a văzut (+0,02). **Decizia „biți” este susținută de date.**
 
 Corectură în trecerea de alternative: candidații nu se mai filtrează după estimarea judecății, ci se verifică toți pe forma exactă. Pe G2P estimarea în biți îi elimina pe toți, inclusiv pe cel bun.
+
+
+## Etapa 2 din PLAN.md: mai multe interpretări și gruparea abstractă
+
+### Ce s-a schimbat (acum implicit în `config/default.json`)
+
+| Parametru | Ce face |
+| --- | --- |
+| `measure: "bits"` | biții hotărăsc ce se învață; K = 16 rămâne limita de termeni pe ecuație |
+| `alternatives: true` | trecerea de alternative din etapa 1 |
+| `multiInterp: true` | o unitate se poate citi ca aplicare a oricărui tipar cu care se potrivește, nu doar a celui principal: la ridicare (somn) și la tiparele cuibărite (predicție). Când o regulă citește un copil prin tiparul q, copilul trece principal la q. Dacă niciun tipar nu acoperă o coloană, se propune unul nou din valorile ei |
+| `abstractGroups: true` | unitățile se grupează și după **forma** copiilor (nivel, lungime), nu doar după copii identici. Așa se găsesc reguli fără niciun copil fix, ca regula R din secțiunea 3 a specificației |
+
+Un tipar este „viu” dacă are aplicări sau dacă e cuibărit într-un tipar viu. Doar tiparele și alegerile vii costă.
+
+### Rezultate (configurarea implicită)
+
+| Exp. | sămânța 1 | 2 | 3 |
+| --- | --- | --- | --- |
+| A1 (biți) | G1 și G2 trec | trec | trec |
+| A2 | trece (în biți pachetul nu e necesar) | trece | trece |
+| A3 | 20/20 | trece | trece |
+| A4 | 0 tipare pe G4 | 0 | 0 |
+| A5 | **100%** (fără locuri legate 60%) | 100% (53%) | 100% (80%) |
+| A6 | **100%** | 100% | 100% |
+| A7 | > 90% până la 1 propoziție | până la 3 | până la 2 |
+| G2P | biți 1,871 față de termeni 2,114 | la fel | la fel |
+
+Regulile găsite, citite din memorie:
+
+- **G7** (4 tipare în toată memoria, total 3779 → 753 biți): `[S, .]`, `[Who, has, the, S, ?]`, `[S1, has, the, S2, .]` și regula **`[Fapt(S1, S2), Întrebare(S2), Răspuns(S1)]`**. Aceasta este exact regula R din specificație: „cineva are ceva; cine are acel ceva? acel cineva”.
+- **G8:** **`[Fapt1(S1, S2), Fapt2(S1, S3), Unde(S2), Răspuns(S3)]`**: „cineva are ceva; acel cineva e undeva; unde e ceva? acolo”. Doi pași de judecată, într-o singură regulă.
+- **A7 (G9):** câte o regulă pentru fiecare număr de propoziții dintre fapt și întrebare (11 reguli). Merge pentru 1–3 propoziții, nu și pentru 4–5. Gruparea cere încă același număr de copii, deci deplasarea (D4) rămâne de făcut.
+
+### Consecințe
+
+1. **Ce s-a câștigat:** regulile sunt generale, nu câte una pe nume sau pe obiect. Ele nu mai depind de echilibrul datelor (motivul pentru care A5/A6 picau) și generalizează la combinații nevăzute. Memoria e mult mai mică.
+2. **Valorile de aur din specificație** (G1: 56 de termeni; 60/63/56) rămân valabile pentru mecanismul de bază, măsurat în termeni. Testele lor fixează explicit acea configurare. În biți, G1 dă tot 2 tipare și o alegere, iar judecata în pachet nu mai e necesară.
+3. **Costul de calcul:** trecerea de alternative copiază memoria pentru fiecare candidat (până la 200 pe nivel). Pe G-uri durează secunde. Pe text adevărat va trebui o contabilitate incrementală. Asta e o problemă pentru etapele 6–7, nu de corectitudine.
+4. **Ce rămâne slab:**
+   - A7 la 4–5 propoziții între fapt și întrebare;
+   - seturile de test sunt mici (15 povești puse deoparte);
+   - generarea după răspuns tot nu pune punctul: locurile puse de unitățile de deasupra nu sunt implementate la predicție.
+5. **Termenii, cu aceleași reparații:** A5 și A6 trec, dar A1 și G2P pică. Concluzia din etapa 1 rămâne.

@@ -103,6 +103,8 @@ export class Predictor {
         return n ? s / n : 0;
       },
       interp: (v) => this.interp(v),
+      children: (v) => this.temp.children(v),
+      multiInterp: !!cfg.multiInterp,
       thetaAccept: cfg.theta_accept,
     };
   }

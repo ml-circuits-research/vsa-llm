@@ -6,7 +6,8 @@
 //   accepts(structId)  -> id-ul alegerii acceptate
 //   isMember(c, v)     -> bool
 //   similar(c, v)      -> asemănarea medie a lui v cu membrii lui c
-//   interp(v)          -> { pattern, fills } | null   (v ca aplicare)
+//   interp(v)          -> { pattern, fills } | null   (v ca aplicare: rescrierea principală)
+//   children(v)        -> copiii lui v, sau null      (opțional; cu el, v se poate citi și ca alt tipar)
 //   thetaAccept
 // }
 // partial: children poate fi mai scurt decât tiparul (prefix).
@@ -34,9 +35,9 @@ export function matchPattern(env, pid, children, { partial = false } = {}) {
     } else if (it.slot !== undefined) {
       if (!put(it.slot, v)) return null;
     } else {
-      const x = env.interp(v);
-      if (!x || x.pattern !== it.sub) return null;
-      for (let j = 0; j < it.args.length; j++) if (!put(it.args[j], x.fills[j])) return null;
+      const fills = interpretAs(env, v, it.sub);
+      if (!fills) return null;
+      for (let j = 0; j < it.args.length; j++) if (!put(it.args[j], fills[j])) return null;
       fixed++;
     }
   }
@@ -46,4 +47,16 @@ export function matchPattern(env, pid, children, { partial = false } = {}) {
 // cel mai bun dintre mai multe potriviri: cei mai puțini membri noi, cei mai mulți copii ficși, id mai mic
 export function bestMatch(matches) {
   return matches.slice().sort((a, b) => a.newMembers.length - b.newMembers.length || b.fixed - a.fixed || a.pattern - b.pattern);
+}
+
+// v citit ca aplicare a tiparului q: rescrierea principală, sau (cu env.children și env.multiInterp)
+// potrivirea directă a copiilor lui v cu q. Întoarce valorile locurilor lui q, sau null.
+export function interpretAs(env, v, q) {
+  const x = env.interp(v);
+  if (x && x.pattern === q) return x.fills;
+  if (!env.multiInterp || !env.children) return null;
+  const ch = env.children(v);
+  if (!ch) return null;
+  const m = matchPattern(env, q, ch);
+  return m ? m.fills : null;
 }

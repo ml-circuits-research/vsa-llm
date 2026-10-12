@@ -31,6 +31,7 @@ export class Memory {
     this._byLevel = null;
     this._usage = null;
     this._choiceUsers = null;
+    this._live = null;
   }
 
   _write(what) {
@@ -209,13 +210,33 @@ export class Memory {
 
   // tipare vii: cu cel puțin o aplicare. Un tipar rămas fără aplicări (după o alternativă) nu mai costă nimic.
   livePatterns(level) {
-    return this.byLevel(level).PATTERN.filter((p) => this.usage(p) > 0);
+    return this.byLevel(level).PATTERN.filter((p) => this.liveSet().has(p));
+  }
+  // tipare vii: cu aplicări, sau cuibărite într-un tipar viu
+  liveSet() {
+    if (!this._live) {
+      const live = new Set();
+      const stack = [];
+      for (let id = 1; id < this.atoms.length; id++)
+        if (this.atoms[id].def?.type === 'PATTERN' && this.usage(id) > 0) {
+          live.add(id);
+          stack.push(id);
+        }
+      while (stack.length)
+        for (const it of this.atoms[stack.pop()].def.items)
+          if (it.sub !== undefined && !live.has(it.sub)) {
+            live.add(it.sub);
+            stack.push(it.sub);
+          }
+      this._live = live;
+    }
+    return this._live;
   }
   // o alegere este vie dacă o acceptă un loc al unui tipar viu
   isLive(id) {
     const d = this.atoms[id].def;
-    if (d?.type === 'PATTERN') return this.usage(id) > 0;
-    if (d?.type === 'CHOICE') return (this.choiceUsers().get(id) ?? []).some((p) => this.usage(p) > 0);
+    if (d?.type === 'PATTERN') return this.liveSet().has(id);
+    if (d?.type === 'CHOICE') return (this.choiceUsers().get(id) ?? []).some((p) => this.liveSet().has(p));
     return true;
   }
   // alegere -> tiparele care o folosesc

@@ -34,14 +34,10 @@ function slotsAfter(ctx, units, F) {
   };
   for (const f of F) {
     const col = units.map((u) => ctx.mem.children(u)[f]);
-    const lift = ctx.cfg.d_max >= 1 ? findLift(ctx, col) : null;
-    if (lift?.q !== undefined) {
-      const ints = col.map((v) => ctx.interp(v));
-      ctx.pattern(lift.q).slots.forEach((_, j) => add(ints.map((x) => x.fills[j])));
-    } else if (lift?.shadow) {
-      // umbra: coloanele ei libere, citite din copiii valorilor
-      for (const g of lift.shadow.F) add(col.map((v) => ctx.mem.children(v)[g]));
-    } else add(col);
+    const lift = ctx.cfg.d_max >= 1 ? findLift(ctx, col, { probe: true }) : null;
+    if (lift?.probe) for (let k = 0; k < lift.probe; k++) add(col.map((v) => `${v}#${k}`)); // tipar care s-ar crea
+    else if (lift) ctx.pattern(lift.q).slots.forEach((_, j) => add(lift.fills.map((f) => f[j])));
+    else add(col);
   }
   return cols.length;
 }
@@ -63,8 +59,24 @@ export function candidateGroups(ctx, units, level) {
       if (!b) buckets.set(key, (b = { key, n, F, units: [] }));
       b.units.push(u);
     }
+    // gruparea abstractă: copii care sunt aplicări ale acelorași tipare (valorile pot diferi peste tot)
+    if (cfg.abstractGroups) {
+      // forma copiilor: o unitate contează prin nivelul și lungimea ei, un token prin el însuși
+      const sig = ch.map((c) => (mem.isUnit(c) ? `u${mem.level(c)}:${mem.children(c).length}` : `a${c}`));
+      if (sig.some((x) => x[0] === 'u')) {
+        const key = `${level}|${n}|A|${sig.join(',')}`;
+        let b = buckets.get(key);
+        if (!b) buckets.set(key, (b = { key, n, F: null, abstract: true, units: [] }));
+        b.units.push(u);
+      }
+    }
   }
-  const cand = [...buckets.values()].filter((g) => valid(mem, g.units, g.F, cfg.m_min));
+  for (const b of buckets.values())
+    if (b.abstract) {
+      const chs = b.units.map((u) => mem.children(u));
+      b.F = [...Array(b.n).keys()].filter((i) => chs.some((c) => c[i] !== chs[0][i]));
+    }
+  const cand = [...buckets.values()].filter((g) => g.F.length > 0 && valid(mem, g.units, g.F, cfg.m_min));
   for (const g of cand) g.slots = slotsAfter(ctx, g.units, g.F);
   cand.sort((a, b) => a.F.length - b.F.length || b.units.length - a.units.length || a.slots - b.slots || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
   return cand;
@@ -72,8 +84,6 @@ export function candidateGroups(ctx, units, level) {
 
 export function group(ctx, units, level) {
   const cand = candidateGroups(ctx, units, level);
-  for (const g of cand) g.unitSet = new Set(g.units);
-  ctx.shadows[level] = cand;
   const { mem, cfg } = ctx;
   const taken = new Set();
   const groups = [];

@@ -9,7 +9,7 @@
   "theta_merge": 0.5,
   "theta_group": null,
   "d_max": 2,
-  "measure": "terms",
+  "measure": "bits",
   "W": 10000,
   "N_deep": 10,
   "beta": 4,
@@ -24,8 +24,9 @@
   "validate": true,
   "bindSlots": true,
   "freeze": true,
-  "alternatives": false,
+  "alternatives": true,
   "altCandidates": 200,
   "altLookahead": false,
-  "shadowLift": false
+  "multiInterp": true,
+  "abstractGroups": true
 }

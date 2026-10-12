@@ -1,6 +1,7 @@
 // Pasul 4: judecata pachetului. Un tipar rămâne numai dacă scurtează memoria (câștig > 0),
 // socotit împreună cu tot pachetul; scoaterea unui tipar scoate și tot ce depinde de el.
 import { defSize, bitsContext, parseMix } from '../memory/size.mjs';
+import { slotValues } from './context.mjs';
 
 const EPS = 1e-9;
 
@@ -18,14 +19,12 @@ export class Judge {
     this.contrib = new Map();
     for (const p of this.props) {
       const m = new Map();
-      const pat = ctx.pattern(p.pattern);
       for (const fills of p.units.values())
-        pat.slots.forEach((s, i) => {
-          const c = ctx.accepts(s);
+        for (const [c, v] of slotValues(ctx, p.pattern, fills)) {
           if (!m.has(c)) m.set(c, new Map());
           const cm = m.get(c);
-          cm.set(fills[i], (cm.get(fills[i]) ?? 0) + 1);
-        });
+          cm.set(v, (cm.get(v) ?? 0) + 1);
+        }
       this.contrib.set(p.pattern, m);
     }
     this.bctx = this.measure !== 'terms' ? bitsContext(this.mem, { atoms: 0, patterns: ctx.patterns.size }) : null;

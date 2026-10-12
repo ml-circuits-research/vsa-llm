@@ -12,6 +12,9 @@ import { group } from '../src/sleep/group.mjs';
 import { propose } from '../src/sleep/propose.mjs';
 import { Judge } from '../src/sleep/package.mjs';
 
+// mecanismul din specificație, fără reparațiile din etapele 1–2 (valorile de aur sunt date în termeni)
+const SPEC = { measure: 'terms', alternatives: false, multiInterp: false, abstractGroups: false };
+
 function g1(cfg) {
   const mem = new Memory(cfg);
   for (const d of generateSet('G1', 1, { holdout: false }).docs) ingest(mem, d.text, { docName: d.id });
@@ -19,7 +22,7 @@ function g1(cfg) {
 }
 
 test('judecata pachetului: 60 -> 56', () => {
-  const cfg = loadConfig({});
+  const cfg = loadConfig(SPEC);
   const mem = g1(cfg);
   assert.equal(total(mem), 60);
   deepSleep(mem, cfg);
@@ -27,7 +30,7 @@ test('judecata pachetului: 60 -> 56', () => {
 });
 
 test('acceptare una câte una: 60 rămâne 60, niciun tipar', () => {
-  const cfg = loadConfig({ packageJudge: false });
+  const cfg = loadConfig({ ...SPEC, packageJudge: false });
   const mem = g1(cfg);
   deepSleep(mem, cfg);
   assert.equal(total(mem), 60);
@@ -35,7 +38,7 @@ test('acceptare una câte una: 60 rămâne 60, niciun tipar', () => {
 });
 
 test('câștig 7 în pachet, -3 singur', () => {
-  const cfg = loadConfig({});
+  const cfg = loadConfig(SPEC);
   const mem = g1(cfg);
   mem.beginPass();
   const ctx = new PassContext(mem, cfg);

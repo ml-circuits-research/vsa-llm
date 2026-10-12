@@ -31,7 +31,7 @@ export function bitsContext(mem, extra = { atoms: 0, patterns: 0 }) {
   for (let id = 1; id < mem.atoms.length; id++) {
     const a = mem.atoms[id];
     if (a.kind === 'TOKEN' || a.def?.type === 'SEQ' || a.def?.type === 'APP') atoms++;
-    if (a.def?.type === 'PATTERN' && mem.usage(id) > 0) patterns++;
+    if (a.def?.type === 'PATTERN' && mem.isLive(id)) patterns++;
   }
   return { V: atoms + extra.atoms, P: patterns + extra.patterns };
 }

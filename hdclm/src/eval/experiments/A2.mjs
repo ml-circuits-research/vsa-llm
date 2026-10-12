@@ -1,3 +1,4 @@
+import { loadConfig } from '../../core/config.mjs';
 // A2: ajunge judecata în pachet? (G1 complet: 60 / 63 / 56)
 import { runDir, trainSimple, writeResult } from '../run.mjs';
 import { total, describe } from '../metrics.mjs';
@@ -9,7 +10,7 @@ export function run({ seed = 1, base = {} } = {}) {
     const r = trainSimple({ base, set: 'G1', seed, overrides: { packageJudge }, genOpts: { holdout: false }, splitOpts: { allTrain: true }, validate: false });
     out[name] = { totalBefore: r.before.total, totalAfter: total(r.mem, r.cfg.measure), patterns: describe(r.mem).patterns.length };
   }
-  const terms = (base.measure ?? 'terms') === 'terms';
+  const terms = loadConfig(base).measure === 'terms';
   const pass = out.package.totalAfter <= out.oneByOne.totalAfter + 1e-9 && (!terms || out.package.totalAfter <= 56);
   const needed = out.package.totalAfter < out.oneByOne.totalAfter - 1e-9;
   return writeResult(dir, {

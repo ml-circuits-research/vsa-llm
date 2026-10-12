@@ -18,9 +18,7 @@ export class PassContext {
     this.extraChoices = new Map();
     this.sim = new ExactSim(ExactSim.memorySource(mem, cfg.freeze === false ? this.extraChoices : null), cfg.w);
     this.memChoiceAdds = new Map(); // alegere din memorie -> Map(valoare -> pondere) propuse
-    this.shadows = {}; // nivel -> toate grupurile valide (și cele pierdute la atribuirea lacomă)
-    this.locked = new Set(); // unități ridicate deja într-un tipar de deasupra: nu mai trec la altul
-    this.switched = 0;
+
   }
   ref() {
     return this.nextRef--;
@@ -64,6 +62,8 @@ export class PassContext {
       isMember: (c, v) => this.isMember(c, v),
       similar: (c, v) => this.similar(c, v),
       interp: (v) => this.interp(v),
+      children: (v) => this.mem.children(v),
+      multiInterp: !!this.cfg.multiInterp,
       thetaAccept: this.cfg.theta_accept,
     };
   }
@@ -106,7 +106,20 @@ export class PassContext {
     pr.units.set(unit, fills);
     for (const d of deps) if (d !== pid) pr.deps.add(d);
     this.rewriteOf.set(unit, pid);
-    const pat = this.pattern(pid);
-    pat.slots.forEach((s, i) => this.addToChoice(this.accepts(s), fills[i]));
+    for (const [c, v] of slotValues(this, pid, fills)) this.addToChoice(c, v);
   }
+}
+
+// perechile (alegere, valoare) pe care le cere o aplicare: locurile tiparului și, pentru tiparele
+// cuibărite, locurile lor (valoarea unui loc legat trebuie să fie membru și al alegerii din tiparul cuibărit)
+export function slotValues(ctx, pid, fills) {
+  const pat = ctx.pattern(pid);
+  const bind = new Map(pat.slots.map((s, i) => [s, fills[i]]));
+  const out = pat.slots.map((s, i) => [ctx.accepts(s), fills[i]]);
+  for (const it of pat.items)
+    if (it.sub !== undefined) {
+      const q = ctx.pattern(it.sub);
+      it.args.forEach((a, j) => out.push([ctx.accepts(q.slots[j]), bind.get(a)]));
+    }
+  return out;
 }

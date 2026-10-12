@@ -7,14 +7,17 @@ import { generateSet, NAMES } from '../src/data/generate.mjs';
 import { deepSleep } from '../src/sleep/scheduler.mjs';
 import { total, isDerived, memoryView } from '../src/memory/size.mjs';
 
-function build(name, cfg = loadConfig({})) {
+// mecanismul din specificație, fără reparațiile din etapele 1–2 (valorile de aur sunt date în termeni)
+const SPEC = { measure: 'terms', alternatives: false, multiInterp: false, abstractGroups: false };
+
+function build(name, cfg = loadConfig(SPEC)) {
   const mem = new Memory(cfg);
   for (const d of generateSet(name, 1, { holdout: false }).docs) ingest(mem, d.text, { docName: d.id });
   return mem;
 }
 
 test('G1: 2 tipare, o alegere cu 10 nume, total 60 -> 56', () => {
-  const cfg = loadConfig({});
+  const cfg = loadConfig(SPEC);
   const mem = build('G1', cfg);
   const roots = [...mem.roots.keys()];
   const unf = roots.map((r) => mem.unfold(r).slice());
@@ -35,7 +38,7 @@ test('G1: 2 tipare, o alegere cu 10 nume, total 60 -> 56', () => {
 });
 
 test('G4 (zgomot): niciun tipar, totalul neschimbat', () => {
-  const cfg = loadConfig({});
+  const cfg = loadConfig(SPEC);
   const mem = build('G4', cfg);
   const t = total(mem);
   deepSleep(mem, cfg);
@@ -44,7 +47,7 @@ test('G4 (zgomot): niciun tipar, totalul neschimbat', () => {
 });
 
 test('G7: regula „răspuns = numele din fapt” (loc legat de două ori)', () => {
-  const cfg = loadConfig({});
+  const cfg = loadConfig(SPEC);
   const mem = build('G7', cfg);
   deepSleep(mem, cfg);
   const twice = (p) => {
@@ -63,11 +66,42 @@ test('G7: regula „răspuns = numele din fapt” (loc legat de două ori)', () 
 });
 
 test('determinism: două rulări G7 dau același JSONL', () => {
-  const cfg = loadConfig({});
+  const cfg = loadConfig(SPEC);
   const run = () => {
     const mem = build('G7', cfg);
     deepSleep(mem, cfg);
     return mem.toJSONL();
   };
   assert.equal(run(), run());
+});
+
+// configurarea implicită (biți + alternative + interpretări multiple + grupare abstractă)
+import { trainSimple } from '../src/eval/run.mjs';
+import { answerAccuracy } from '../src/eval/metrics.mjs';
+
+function rulesOf(mem, level) {
+  return mem.allOfType('PATTERN').filter((p) => mem.isLive(p) && mem.atoms[p].level === level);
+}
+
+test('G7 implicit: o singură regulă generală [Fapt(S1,S2), Întrebare(S2), Răspuns(S1)]', () => {
+  const r = trainSimple({ set: 'G7' });
+  const rules = rulesOf(r.mem, 4);
+  assert.equal(rules.length, 1);
+  const d = r.mem.atoms[rules[0]].def;
+  assert.equal(d.items.length, 3);
+  assert.ok(d.items.every((it) => it.sub !== undefined));
+  assert.equal(d.slots.length, 2);
+  const [a, b, c] = d.items.map((it) => it.args);
+  assert.deepEqual([a.length, b.length, c.length], [2, 1, 1]);
+  assert.ok(b[0] === a[1] && c[0] === a[0]); // obiectul din întrebare și numele din răspuns vin din fapt
+  assert.equal(r.recon, 1);
+  assert.equal(answerAccuracy(r.mem, r.cfg, r.split.test.filter((x) => x.heldout)).acc, 1);
+});
+
+test('G8 implicit: regula cu doi pași, 100% pe combinațiile puse deoparte', () => {
+  const r = trainSimple({ set: 'G8' });
+  const rules = rulesOf(r.mem, 4);
+  assert.equal(rules.length, 1);
+  assert.equal(r.mem.atoms[rules[0]].def.items.length, 4);
+  assert.equal(answerAccuracy(r.mem, r.cfg, r.split.test.filter((x) => x.heldout)).acc, 1);
 });

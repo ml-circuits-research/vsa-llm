@@ -8,8 +8,7 @@ Drumul, din specificație (secțiunea 19): blocul A (mecanismul, pe text generat
 
 ## Unde suntem
 
-Pașii 1–5 implementați, blocul A rulat. Trec: A2, A3, A4, A5. Pică: A1 (G2: nu apare categoria „obiect”), A6 (pe date dezechilibrate), A7 (deplasare).
-Diagnostic: (1) măsura în termeni nu plătește categoriile semantice; (2) gruparea lacomă pe un nivel nu vede câștigul de pe nivelul de deasupra, deci depinde de echilibrul datelor.
+Etapele 1 și 2 încheiate: cu biți, interpretări multiple și grupare abstractă, A1–A6 trec pe trei semințe; A7 trece până la 1–3 propoziții. Sistemul găsește singur regulile generale din specificație (R din secțiunea 3, regula cu doi pași din G8). Urmează etapa 3 (blocul A consemnat), apoi 4 (deplasarea, pentru A7).
 
 Decizie luată: **biții hotărăsc ce se învață; termenii rămân limită (K termeni pe ecuație)**.
 
