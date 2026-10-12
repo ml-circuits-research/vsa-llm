@@ -69,3 +69,10 @@ Profilul după acești pași (A7 + G10, 21 s): **68% din timp e verificarea pe t
 **O6** (trecerea de alternative fără copii complete ale memoriei) ar trebui să dea rezultate identice, dar e mai mult cod.
 
 **Pe text adevărat, fără O2 și O5, predicția nu scalează:** votul compară fiecare token cu toate unitățile nivelului. La 100.000 de tokeni de învățare înseamnă ~10⁴ unități × 10⁵ predicții de validare.
+
+## Optimizări aplicate, partea a doua (tot fără efect asupra rezultatelor)
+
+| Pas | Ce | Rezultat |
+| --- | --- | --- |
+| sursa 4 memorată | frecvența și partea egală pe vocabular nu depind de prefix; se calculează o dată pe nivel, nu la fiecare token | setul de referință: 26,0 → 22,8 s; amprenta identică |
+| votul cu index exact | simE(x, y) > 0 ⟺ x și y au o trăsătură comună (atomul, o alegere, sau recursiv pe aceeași poziție). Asemănarea se calculează doar pentru votanții cu trăsături comune. Cei cu s = 0 au toți aceeași greutate și se iau dintr-o listă sortată o dată. Activ doar cu strategia exactă | G: fără câștig (aproape toți votanții au trăsături comune); **TinyStories 10k tokeni: predicția 4,5 → 2,2 s**, eroare identică (12,468698646527113 în ambele variante); amprenta identică |

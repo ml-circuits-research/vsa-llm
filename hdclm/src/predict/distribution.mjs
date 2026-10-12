@@ -147,18 +147,10 @@ export class Predictor {
   // distribuția peste copiii posibili (și END) ai unei unități deschise
   childDistribution(levels, prefix) {
     const { mem, cfg } = this;
-    const s1 = new Map(), s2 = new Map(), s3 = new Map(), s4 = new Map();
+    const s1 = new Map(), s2 = new Map(), s3 = new Map();
     const n = prefix.length;
     // sursa 2: votul unităților
-    const cands = [];
-    const { list, sums } = this.prefixSums(levels, prefix);
-    for (let j = 0; j < list.length; j++) {
-      const v = list[j];
-      const c = v.children;
-      if (c.length < n) continue;
-      const s = n ? sums[j] / n : 1;
-      cands.push({ id: v.id, score: v.count * Math.exp(cfg.beta * (s - 1)), next: c.length === n ? END : c[n] });
-    }
+    const cands = this.sim instanceof ExactSim ? this.indexedVoters(levels, prefix) : this.allVoters(levels, prefix);
     cands.sort(byScoreThenId);
     for (const c of cands.slice(0, cfg.n_vote)) addTo(s2, c.next, c.score);
     // sursele 1 și 3: tiparele care se potrivesc cu prefixul
@@ -188,16 +180,9 @@ export class Predictor {
           addTo(s1, this.temp.make(items, mem.atoms[it.sub].level), w);
         }
       }
-    // sursa 4: frecvența, plus o parte egală pentru fiecare token din vocabular
-    const freq = new Map();
-    for (const l of levels) for (const [a, c] of mem.childFreq[l]) addTo(freq, a, c);
-    const fn = normalize(freq);
-    const sigma = fn ? cfg.smooth : 1;
-    if (fn) for (const [a, p] of fn) addTo(s4, a, (1 - sigma) * p);
-    const share = sigma / (this.vocab.length + 2);
-    for (const t of this.vocab) addTo(s4, t, share);
-    addTo(s4, UNK, share);
-    addTo(s4, END, share);
+    // sursa 4: frecvența, plus o parte egală pentru fiecare token din vocabular.
+    // Nu depinde de prefix, deci se calculează o singură dată pe nivel (aceeași Map, aceeași ordine).
+    const s4 = this.freqSource(levels);
     // amestecul
     // O4: sursele nu se mai copiază în Map-uri normalizate; se împarte la sumă direct, cu aceleași operații
     const srcs = [s1, s2, s3, s4];
@@ -244,6 +229,106 @@ export class Predictor {
       this.sumCache.set(key, sums);
     }
     return { list, sums };
+  }
+
+  allVoters(levels, prefix) {
+    const n = prefix.length;
+    const out = [];
+    const { list, sums } = this.prefixSums(levels, prefix);
+    for (let j = 0; j < list.length; j++) {
+      const v = list[j];
+      const c = v.children;
+      if (c.length < n) continue;
+      const s = n ? sums[j] / n : 1;
+      out.push({ id: v.id, score: v.count * Math.exp(this.cfg.beta * (s - 1)), next: c.length === n ? END : c[n] });
+    }
+    return out;
+  }
+
+  // Votul cu index, exact (numai cu asemănarea exactă): simE(x, y) > 0 dacă și numai dacă x și y au o
+  // trăsătură comună în F, unde F(x) = {x} ∪ alegerile lui x ∪ {(k, f) : f ∈ F(copil_k(x))}.
+  // Votanții fără nicio trăsătură comună cu prefixul au s = 0, deci toți aceeași greutate count·e^(−β):
+  // dintre ei contează doar primii n_vote, luați dintr-o listă sortată o singură dată. Rezultat identic.
+  features(x) {
+    this.fCache ??= new Map();
+    let f = this.fCache.get(x);
+    if (f) return f;
+    f = [String(x)];
+    if (!this.temp.isTemp(x)) for (const c of this.mem.atoms[x]?.choices ?? []) f.push(`c${c}`);
+    if (!this.temp.isToken(x)) {
+      const ch = this.temp.children(x);
+      if (ch) ch.forEach((c, k) => { for (const g of this.features(c)) f.push(`${k}.${g}`); });
+    }
+    this.fCache.set(x, f);
+    return f;
+  }
+  voterIndex(levels) {
+    const key = levels.join('+');
+    this.vIndex ??= new Map();
+    let ix = this.vIndex.get(key);
+    if (ix) return ix;
+    const { list } = this.prefixSums(levels, []);
+    const map = new Map();
+    list.forEach((v, j) => v.children.forEach((c, i) => {
+      for (const f of this.features(c)) {
+        const k = `${i}|${f}`;
+        let a = map.get(k);
+        if (!a) map.set(k, (a = []));
+        a.push(j);
+      }
+    }));
+    // ordinea votanților cu s = 0 (și cu s = 1, la prefix gol): după greutate, apoi după id
+    const zeroOrder = list.map((v, j) => ({ j, id: v.id, score: v.count })).sort(byScoreThenId).map((x) => x.j);
+    ix = { list, map, zeroOrder };
+    this.vIndex.set(key, ix);
+    return ix;
+  }
+  indexedVoters(levels, prefix) {
+    const n = prefix.length;
+    const { beta, n_vote } = this.cfg;
+    const { list, map, zeroOrder } = this.voterIndex(levels);
+    const entry = (j, s) => {
+      const c = list[j].children;
+      return { id: list[j].id, score: list[j].count * Math.exp(beta * (s - 1)), next: c.length === n ? END : c[n] };
+    };
+    if (n === 0) return zeroOrder.slice(0, Math.max(n_vote, 0) + 1).map((j) => entry(j, 1));
+    const pos = new Set();
+    for (let i = 0; i < n; i++) for (const f of this.features(prefix[i])) for (const j of map.get(`${i}|${f}`) ?? []) pos.add(j);
+    const out = [];
+    for (const j of pos) {
+      const c = list[j].children;
+      if (c.length < n) continue;
+      let s = 0;
+      for (let i = 0; i < n; i++) s += this.sim.simE(prefix[i], c[i]);
+      out.push(entry(j, s / n));
+    }
+    let added = 0;
+    for (const j of zeroOrder) {
+      if (added > n_vote) break;
+      if (pos.has(j) || list[j].children.length < n) continue;
+      out.push(entry(j, 0));
+      added++;
+    }
+    return out;
+  }
+
+  freqSource(levels) {
+    const key = levels.join('+');
+    this.s4Cache ??= new Map();
+    let s4 = this.s4Cache.get(key);
+    if (s4) return s4;
+    s4 = new Map();
+    const freq = new Map();
+    for (const l of levels) for (const [a, c] of this.mem.childFreq[l]) addTo(freq, a, c);
+    const fn = normalize(freq);
+    const sigma = fn ? this.cfg.smooth : 1;
+    if (fn) for (const [a, p] of fn) addTo(s4, a, (1 - sigma) * p);
+    const share = sigma / (this.vocab.length + 2);
+    for (const t of this.vocab) addTo(s4, t, share);
+    addTo(s4, UNK, share);
+    addTo(s4, END, share);
+    this.s4Cache.set(key, s4);
+    return s4;
   }
 
   firstToken(a) {
