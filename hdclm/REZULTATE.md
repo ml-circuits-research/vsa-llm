@@ -267,3 +267,20 @@ LEAVE nu intră în clasă.
 - **G11** rămâne la 0%: corespondența dintre formele verbului („carried” → „carry”) nu e o repetiție.
 
 Detaliile și ce s-a încercat fără succes sunt în DECIZII.md, D15 și D16.
+
+## Controlul orb GBLIND: preînregistrare (scrisă înainte de rulare)
+
+Set: `src/data/gblind.mjs` (alte nume, locuri, obiecte și verbe; 2 sau 3 fapte; alte întrebări; capcane LOOK și NEG). Experimentul: `node src/cli.mjs experiment BLIND --seed N`.
+
+Se rulează o singură dată, pe semințele 1–3. Nicio reparație nu se face după rezultate, iar rezultatele se trec aici așa cum ies. Configurările fixate dinainte:
+
+- **B0** (implicit, D1–D16): `node src/cli.mjs experiment BLIND --seed N`
+- **B1** (concepte în grupare, D17 cu clasele vii D20, somn până se oprește): `--set concepts=true --set maxDeepPasses=80`
+
+Tipurile locurilor (D18) și inducția (D19) **nu** intră în rulare: încă nu sunt măsurate pe seturile de dezvoltare cu judecata unică.
+
+Măsuri:
+- reformulări cu aceeași ecuație;
+- capcane contopite (LOC/LOOK, LOC/NEG);
+- QA pe poveștile puse deoparte, pe sens și pe capcană;
+- numărul de tipare și de clase.
