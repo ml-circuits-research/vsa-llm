@@ -310,3 +310,30 @@ Măsuri:
 2. clasele care unesc sensuri cu aceleași tipuri dar funcții diferite.
 
 Ambele trebuie rezolvate înaintea lacunelor din PROPUNERI_LACUNE.md. Verificarea se va face pe un set orb nou (GBLIND2), proiectat înainte de reparații.
+
+## Testul de decizie pe GBLIND2: preînregistrare (scrisă înainte de rulare)
+
+**Context.** După GBLIND, reparațiile s-au făcut pe GBLIND, care e de acum set văzut:
+- D21: curriculumul pe niveluri;
+- D22: alternativele încearcă și grupuri numai din înșiruiri;
+- D23: subgrupurile abstracte după o coloană;
+- judecata unică în biți (descrierea totală);
+- clasele surori disjuncte la inducție.
+
+Pe GBLIND, sămânța 1: QA pe testul obișnuit a urcat de la 17% la 39–56%, iar pe poveștile puse deoparte de la 14% la 24%. Numerele sunt mici, deci zgomotoase.
+
+**Setul.** GBLIND2 (`src/data/gblind2.mjs`), proiectat de un subagent care nu a avut acces la mecanism și nerulat până acum. Are:
+- vocabular nou și 2–4 fapte pe poveste;
+- câte două formulări de întrebare pentru fiecare sens;
+- trei sensuri-capcană (LEAVE, DREAM, PAINT).
+
+**Configurări, fiecare rulată o singură dată, pe semințele 1–3:**
+- **G0 (implicit):** `node src/cli.mjs experiment BLIND --seed N --set blindSet=GBLIND2`
+- **GF (tot ce s-a adăugat):** în plus `--set levelCurriculum=true --set altSeqGroups=true --set splitAbstract=true --set slotTypes=true --set concepts=true --set induction=true --set maxDeepPasses=80`
+
+**Criteriile de trecere pentru GF, pe toate cele 3 semințe:**
+- QA pe poveștile puse deoparte ≥ 70%;
+- reformulări cu aceeași ecuație ≥ 60%;
+- capcane contopite 0%.
+
+**Așteptare declarată dinainte:** pe GBLIND, GF dă doar 24% pe poveștile puse deoparte, deci probabil pică. Contează cât câștigă GF față de G0, adică dacă reparațiile sunt generale și nu potrivite pe GBLIND.
