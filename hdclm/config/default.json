@@ -37,5 +37,6 @@
   "slotTypes": false,
   "induction": false,
   "levelCurriculum": false,
-  "altSeqGroups": false
+  "altSeqGroups": false,
+  "splitAbstract": false
 }
