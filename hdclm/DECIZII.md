@@ -302,3 +302,23 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
   - 4 fapte: 0 din 14, chiar și pe antrenare, pentru că nicio regulă nu are lungimea asta.
 
   Regulile au lungime fixă, deci e nevoie de golul din PROPUNERI_LACUNE.md (lacuna 3). Acesta e pasul următor.
+
+## D25. Cadrul din ALGORITM.md (aprobat de autor) și judecata unică peste tot
+
+- **Aprobat (toate patru deciziile din ALGORITM.md, §10):**
+  1. lista închisă de operatori O1–O7; negația este O4 + O7;
+  2. O6 (mulțimea de fapte, cu timpul ca rol) în locul golului, ca schimbare a modelului de date;
+  3. „cel mai bun întâi, după ΔL exact” în locul ordinii din specificația §9 (întâi grupurile cu mai puține locuri);
+  4. vectorii HDC propun candidați, iar criteriul exact decide. I13 rămâne pentru H1–H8.
+- **Pasul 2 din plan.**
+  - `judgeAll`: și trecerea obișnuită trece prin judecata unică. Pachetul se aplică pe o copie. Tiparele noi și cele ale căror alegeri sau clase se lărgesc nu au voie să facă descrierea totală mai lungă (memoria + predicția unităților revendicate nou).
+  - Dacă pachetul pică, iese propunerea cu cea mai mare scumpire a predicției, cu tot ce depinde de ea, apoi se reîncearcă.
+  - `formRepeat: false`: se scoate criteriul din D15 („cuvintele prin care diferă formele nu se repetă sistematic în rând”). E o euristică de acceptare, iar acceptarea o decide acum judecata unică.
+- **Profilul ALGORITM** (opțiunile împreună):
+
+  ```
+  levelCurriculum altSeqGroups splitAbstract slotTypes concepts induction classJaccard judgeAll
+  formRepeat=false maxDeepPasses=80
+  ```
+
+  Devine implicit după verificare: blocul A, GPARA, GBLIND, GBLIND2.

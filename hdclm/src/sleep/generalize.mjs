@@ -18,7 +18,7 @@ function claim(pred, P, ch) {
 }
 
 // biții de predicție ai unităților, de la primul copil revendicat nou (înainte, potrivirea e aceeași)
-function bitsOf(pred, mem, units, fromChild) {
+export function bitsOf(pred, mem, units, fromChild) {
   let b = 0;
   for (const u of units) {
     const toks = mem.unfold(u).map((t) => ({ text: mem.atoms[t].text, spaceBefore: true, newlineBefore: false }));
@@ -33,13 +33,15 @@ export function newlyClaimed(mem, k, cfg, patterns) {
   const po = new Predictor(mem, cfg), pn = new Predictor(k, cfg);
   const claimed = new Map(); // unitate -> primul copil revendicat nou
   for (const P of patterns) {
-    if (!mem.atoms[P] || mem.atoms[P].def?.type !== 'PATTERN') continue;
-    const bl = mem.byLevel(mem.atoms[P].level);
+    // P poate fi un tipar nou (există doar în copie): atunci în memoria veche nu revendica nimic
+    if (k.atoms[P]?.def?.type !== 'PATTERN') continue;
+    const old = mem.atoms[P]?.def?.type === 'PATTERN';
+    const bl = mem.byLevel(k.atoms[P].level);
     for (const u of [...bl.SEQ, ...bl.APP]) {
-      const d = mem.atoms[u].def;
-      if (d.type === 'APP' && d.pattern === P) continue;
+      const d = k.atoms[u].def;
+      if (d.type === 'APP' && d.pattern === P) continue; // unitățile rescrise de P: câștigul lor e în MDL
       const ch = mem.children(u);
-      const kOld = claim(po, P, ch);
+      const kOld = old ? claim(po, P, ch) : 0;
       if (claim(pn, P, ch) > kOld) claimed.set(u, Math.min(kOld, claimed.get(u) ?? Infinity));
     }
   }

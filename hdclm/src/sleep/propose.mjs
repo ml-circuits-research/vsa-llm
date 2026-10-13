@@ -140,7 +140,8 @@ function classLift(ctx, ints, lvl, probe = false, rowOthers = null) {
   // membrii unei clase diferă doar prin formă: cuvintele prin care diferă nu au voie să se repete sistematic
   // în restul unității (în cel puțin θ_merge din rânduri). O repetiție sistematică, de exemplu obiectul din
   // fapt în întrebare, arată că diferența ține de conținut; una întâmplătoare (alt fapt cu același verb) nu.
-  if (rowOthers) {
+  // (D25: cu formRepeat: false criteriul nu se mai aplică; decide judecata unică)
+  if (rowOthers && ctx.cfg.formRepeat !== false) {
     const ft = formTokens(ctx, pats);
     let rep = 0;
     for (let r = 0; r < ints.length; r++) if (ft.get(ints[r].pattern).some((t) => rowOthers[r].has(t))) rep++;
