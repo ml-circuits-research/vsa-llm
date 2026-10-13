@@ -2,10 +2,10 @@
 // o formă adăugată unei clase, o ipoteză de concept folosită) se judecă la fel:
 //   1. lungimea memoriei (MDL), măsurată exact, pe o copie;
 //   2. contraexemplele: unitățile văzute pe care schimbarea le „revendică” nou (un tipar atins se potrivește
-//      acum pe un prefix mai lung al lor) nu au voie să fie prezise mai prost. Biții lor de predicție se măsoară
-//      înainte și după;
+//      acum pe un prefix mai lung al lor). Biții lor de predicție se măsoară înainte și după; în biți, creșterea
+//      lor se scade din câștigul memoriei (descrierea totală: memoria + predicția datelor revendicate);
 //   3. dacă există textul de validare (opts.validate), eroarea lui nu are voie să crească.
-// Schimbarea trece numai dacă toate trei sunt îndeplinite. Nu există praguri: doar „mai scurt” și „nu mai prost”.
+// Schimbarea trece numai dacă descrierea totală scade și validarea nu se strică. Nu există praguri.
 import { total } from '../memory/size.mjs';
 import { Predictor } from '../predict/distribution.mjs';
 import { matchPattern } from '../memory/match.mjs';
@@ -18,7 +18,7 @@ function claim(pred, P, ch) {
 }
 
 // biții de predicție ai unităților, de la primul copil revendicat nou (înainte, potrivirea e aceeași)
-function bitsOf(pred, mem, units, fromChild) {
+export function bitsOf(pred, mem, units, fromChild) {
   let b = 0;
   for (const u of units) {
     const toks = mem.unfold(u).map((t) => ({ text: mem.atoms[t].text, spaceBefore: true, newlineBefore: false }));
@@ -33,13 +33,15 @@ export function newlyClaimed(mem, k, cfg, patterns) {
   const po = new Predictor(mem, cfg), pn = new Predictor(k, cfg);
   const claimed = new Map(); // unitate -> primul copil revendicat nou
   for (const P of patterns) {
-    if (!mem.atoms[P] || mem.atoms[P].def?.type !== 'PATTERN') continue;
-    const bl = mem.byLevel(mem.atoms[P].level);
+    // P poate fi un tipar nou (există doar în copie): atunci în memoria veche nu revendica nimic
+    if (k.atoms[P]?.def?.type !== 'PATTERN') continue;
+    const old = mem.atoms[P]?.def?.type === 'PATTERN';
+    const bl = mem.byLevel(k.atoms[P].level);
     for (const u of [...bl.SEQ, ...bl.APP]) {
-      const d = mem.atoms[u].def;
-      if (d.type === 'APP' && d.pattern === P) continue;
+      const d = k.atoms[u].def;
+      if (d.type === 'APP' && d.pattern === P) continue; // unitățile rescrise de P: câștigul lor e în MDL
       const ch = mem.children(u);
-      const kOld = claim(po, P, ch);
+      const kOld = old ? claim(po, P, ch) : 0;
       if (claim(pn, P, ch) > kOld) claimed.set(u, Math.min(kOld, claimed.get(u) ?? Infinity));
     }
   }
@@ -54,7 +56,9 @@ export function judgeGeneralization(mem, k, cfg, { patterns = [], validate, befo
   const { units, fromChild, po, pn } = newlyClaimed(mem, k, cfg, patterns);
   out.claimed = units.length;
   if (units.length) out.predDelta = bitsOf(pn, k, units, fromChild) - bitsOf(po, mem, units, fromChild);
-  if (out.predDelta > EPS) return out;
+  // în biți, cele două părți se adună: memoria mai scurtă (gain) față de predicția mai scumpă a unităților
+  // revendicate (predDelta). În termeni nu au aceeași unitate: atunci predicția nu are voie să se strice deloc.
+  if ((cfg.measure ?? 'terms') === 'bits' ? out.gain - Math.max(0, out.predDelta) <= EPS : out.predDelta > EPS) return out;
   if (validate) {
     out.valDelta = validate(k) - validate(mem);
     if (out.valDelta > EPS) return out;

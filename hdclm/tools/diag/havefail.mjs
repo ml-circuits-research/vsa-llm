@@ -1,0 +1,12 @@
+import { trainSimple } from '../../src/eval/run.mjs';
+import { answerAccuracy, describe } from '../../src/eval/metrics.mjs';
+const r = trainSimple({ set: 'GPARA', seed: +(process.argv[2] ?? 1), overrides: { concepts: true, slotTypes: process.env.ST === '1', ...JSON.parse(process.env.OV ?? '{}') } });
+const held = r.split.test.filter((d) => d.heldout);
+const qa = answerAccuracy(r.mem, r.cfg, held);
+for (const x of qa.rows.filter((x) => !x.ok)) console.log(JSON.stringify(x.meta.prompt).slice(-140), '→', x.top, 'gold', x.answer, x.p.toFixed(2));
+const D = describe(r.mem);
+for (const p of D.patterns.filter((p) => p.level >= 4)) console.log(p.id, 'L' + p.level, 'u' + p.usage, p.text);
+for (const c of r.mem.allOfType('PCLASS')) console.log('clasa', c, r.mem.isLive(c), r.mem.atoms[c].def.members.map((m) => D.patterns.find((p) => p.id === m)?.text ?? m).join(' | '), JSON.stringify(r.mem.atoms[c].concept ?? null)?.slice(0, 80));
+console.log('trecerile', r.passes.filter((p) => p.kind !== 'deep').map((p) => `${p.kind}${p.changed ? '+' : ''}${p.retyped ?? ''}`).join(' '));
+for (const c of r.mem.allOfType('CHOICE').filter((c) => r.mem.atoms[c].def.typed)) console.log('tipizată', c, [...r.mem.atoms[c].def.members.keys()].map((m) => { const d = r.mem.atoms[m].def; return d?.type === 'PCLASS' ? 'M' + m : d?.type === 'PATTERN' ? 'P' + m : JSON.stringify(r.mem.text(m)); }).join(' '));
+console.log('QA', qa.acc.toFixed(3), qa.n);

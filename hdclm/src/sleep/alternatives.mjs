@@ -40,7 +40,9 @@ export function alternativePass(mem, cfg, { maxLevel = LEVELS } = {}) {
     if (units.length < 2) continue;
     const probe = new PassContext(mem, cfg);
     const cands = candidateGroups(probe, units, level)
-      .filter((g) => !reproduces(mem, g) && g.units.some((u) => mem.atoms[u].def.type === 'APP'))
+      // D22: și grupurile numai din înșiruiri; trecerea obișnuită le poate bloca prin ordinea ei (grupuri mici,
+      // respinse apoi, iau unitățile înaintea grupului mare); aici decide câștigul exact
+      .filter((g) => !reproduces(mem, g) && (cfg.altSeqGroups || g.units.some((u) => mem.atoms[u].def.type === 'APP')))
       .slice(0, cfg.altCandidates ?? 200);
     for (const g of cands) {
       const ctx = new PassContext(mem, cfg);
@@ -63,6 +65,9 @@ export function alternativePass(mem, cfg, { maxLevel = LEVELS } = {}) {
       if (gain > 1e-9 && (!best || gain > best.gain + 1e-9)) best = { gain, pkg, key: g.key, level };
     }
   }
+  // D26: alegerea celui mai bun dintre N candidați costă log2(N) biți (numele candidatului ales). Un câștig mai mic
+  // e la nivelul unei repetiții întâmplătoare găsite prin căutare (de exemplu pe text fără structură, A4).
+  if (best && cfg.selectionCost && measure === 'bits' && best.gain <= Math.log2(Math.max(2, tried.length))) best = null;
   if (!best) {
     mem.frozen = false;
     return { before, after: before, changed: false, tried: tried.length };

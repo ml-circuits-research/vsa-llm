@@ -1,0 +1,14 @@
+{
+  "_doc": "Profilul ALGORITM.md (D25-D26): curriculum pe niveluri, cel mai bun candidat întâi, judecata unică peste tot, tipuri, concepte, inducție. Se folosește cu --profile algoritm.",
+  "levelCurriculum": true,
+  "altSeqGroups": true,
+  "splitAbstract": true,
+  "slotTypes": true,
+  "concepts": true,
+  "induction": true,
+  "maxDeepPasses": 80,
+  "classJaccard": true,
+  "judgeAll": true,
+  "formRepeat": false,
+  "selectionCost": true
+}

@@ -35,5 +35,12 @@
   "concepts": false,
   "conceptsFirst": false,
   "slotTypes": false,
-  "induction": false
+  "induction": false,
+  "levelCurriculum": false,
+  "altSeqGroups": false,
+  "splitAbstract": false,
+  "classJaccard": false,
+  "judgeAll": false,
+  "formRepeat": true,
+  "selectionCost": false
 }

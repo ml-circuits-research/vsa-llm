@@ -7,6 +7,7 @@ import { Judge } from './package.mjs';
 import { total } from '../memory/size.mjs';
 import { fail } from '../core/invariants.mjs';
 import { LEVELS } from '../memory/store.mjs';
+import { judgeGeneralization, newlyClaimed, patternsUsing, bitsOf as bitsOfUnits } from './generalize.mjs';
 
 // opts.validate(mem) -> eroarea de predicție pe textul de validare (opțional)
 export function sleepPass(mem, cfg, opts = {}) {
@@ -35,22 +36,60 @@ export function sleepPass(mem, cfg, opts = {}) {
   // Pachetul se aplică pe o copie; dacă totalul real crește, iese propunerea cu cel mai mic câștig.
   let pkg = judge.build(accepted);
   let exactChecks = 0, removed = 0;
-  for (;;) {
-    if (!pkg.rewrites.length) break;
-    const m = mem.clone();
-    m.frozen = true;
-    m.commit(pkg, { check: false });
-    exactChecks++;
-    if (total(m, measure) <= before + 1e-9) break;
-    let worst = null, wg = Infinity;
-    for (const p of judge.props) {
-      if (!accepted.has(p.pattern)) continue;
-      const g = judge.gain(p.pattern, accepted);
-      if (g < wg - 1e-9) [wg, worst] = [g, p.pattern];
+  const exactCheck = () => {
+    for (;;) {
+      if (!pkg.rewrites.length) break;
+      const m = mem.clone();
+      m.frozen = true;
+      m.commit(pkg, { check: false });
+      exactChecks++;
+      if (total(m, measure) <= before + 1e-9) break;
+      let worst = null, wg = Infinity;
+      for (const p of judge.props) {
+        if (!accepted.has(p.pattern)) continue;
+        const g = judge.gain(p.pattern, accepted);
+        if (g < wg - 1e-9) [wg, worst] = [g, p.pattern];
+      }
+      for (const x of judge.closure(worst, accepted)) accepted.delete(x);
+      removed++;
+      pkg = judge.build(accepted);
     }
-    for (const x of judge.closure(worst, accepted)) accepted.delete(x);
-    removed++;
-    pkg = judge.build(accepted);
+  };
+  exactCheck();
+  // judecata unică și în trecerea obișnuită (D25, ALGORITM.md §3): tiparele noi și cele ale căror alegeri sau clase
+  // se lărgesc nu au voie să facă descrierea totală mai lungă prin predicția unităților pe care le revendică nou.
+  // Dacă pachetul pică, iese propunerea cu cea mai mare scumpire a predicției (cu tot ce depinde de ea).
+  let judged = null;
+  if (cfg.judgeAll) {
+    for (;;) {
+      if (!pkg.rewrites.length) break;
+      const k = mem.clone();
+      k.frozen = true;
+      const map = k.commit(pkg, { check: false });
+      const touched = new Set();
+      for (const p of pkg.newPatterns) touched.add(map.get(p.tmp));
+      for (const a of pkg.addMembers) for (const p of patternsUsing(mem, { choice: a.choice })) touched.add(p);
+      for (const a of pkg.classAdds ?? []) for (const p of patternsUsing(mem, { cls: a.cls })) touched.add(p);
+      const J = judgeGeneralization(mem, k, cfg, { patterns: [...touched], before });
+      judged = { gain: J.gain, claimed: J.claimed, predDelta: J.predDelta, accept: J.accept };
+      if (J.accept || !(J.gain > 1e-9)) break;
+      // vinovatul: propunerea nouă cu cea mai mare scumpire a predicției pe unitățile revendicate doar de ea
+      let worst = null, wd = 0;
+      for (const p of judge.props) {
+        if (!accepted.has(p.pattern) || !p.isNew) continue;
+        const id = map.get(p.pattern);
+        const { units, fromChild, po, pn } = newlyClaimed(mem, k, cfg, [id]);
+        if (!units.length) continue;
+        const d = bitsOfUnits(pn, k, units, fromChild) - bitsOfUnits(po, mem, units, fromChild);
+        if (d > wd + 1e-9) [wd, worst] = [d, p.pattern];
+      }
+      if (worst === null) break;
+      for (const x of judge.closure(worst, accepted)) accepted.delete(x);
+      removed++;
+      pkg = judge.build(accepted);
+      // pachetul s-a schimbat: verificarea exactă din nou (fără ea, totalul poate crește, I8)
+      exactCheck();
+    }
   }
   mem.commit(pkg);
   const after = total(mem, measure);
@@ -67,6 +106,7 @@ export function sleepPass(mem, cfg, opts = {}) {
     validation,
     exactChecks,
     removedByExactCheck: removed,
+    judged,
   };
 }
 

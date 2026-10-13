@@ -95,6 +95,35 @@ export function candidateGroups(ctx, units, level) {
       }
     }
   }
+  // D23: despărțirea grupurilor abstracte după tiparul (sau clasa vie) unei coloane. Un grup abstract poate
+  // amesteca sensuri cu aceeași structură a repetițiilor (de exemplu întrebări despre loc și despre obiect);
+  // atunci coloana faptului nu se poate ridica. Subgrupurile, câte unul pe valoarea coloanei j, se propun
+  // alături de grupul întreg; alege judecata (câștigul exact). Fără prag: un subgrup cere doar m_min unități.
+  if (cfg.splitAbstract) {
+    const liveCls = liveClassIndex(mem);
+    const typeOf = (c) => {
+      const x = mem.isUnit(c) ? ctx.interp(c) : null;
+      return x ? liveCls.get(x.pattern) ?? x.pattern : null;
+    };
+    for (const b of [...buckets.values()]) {
+      if (!b.abstract) continue;
+      for (let j = 0; j < b.n; j++) {
+        const parts = new Map();
+        for (const u of b.units) {
+          const t = typeOf(mem.children(u)[j]);
+          if (t === null) continue;
+          if (!parts.has(t)) parts.set(t, []);
+          parts.get(t).push(u);
+        }
+        if (parts.size < 2) continue;
+        for (const [t, us] of parts) {
+          if (us.length < (cfg.m_min ?? 2)) continue;
+          const key = `${b.key}|j${j}=${t}`;
+          if (!buckets.has(key)) buckets.set(key, { key, n: b.n, F: null, abstract: true, units: us });
+        }
+      }
+    }
+  }
   for (const b of buckets.values())
     if (b.abstract) {
       const chs = b.units.map((u) => mem.children(u));

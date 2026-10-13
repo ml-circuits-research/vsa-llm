@@ -1,6 +1,7 @@
-// Comenzi: experiment <A1..A7|A> [--seed N] [--set cheie=valoare ...]
+// Comenzi: experiment <A1..A7|A> [--seed N] [--profile nume] [--set cheie=valoare ...]
 // HDCLM_TAG=nume scrie în runs/nume/<experiment>/
 import { pathToFileURL } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -8,7 +9,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 const [cmd, what = 'A', ...rest] = process.argv.slice(2);
 const seed = rest.includes('--seed') ? Number(rest[rest.indexOf('--seed') + 1]) : 1;
 // --set cheie=valoare (repetabil): suprascrie parametri din config/default.json
+// --profile nume: config/profiles/<nume>.json, aplicat înaintea lui --set
 const base = {};
+if (rest.includes('--profile')) {
+  const name = rest[rest.indexOf('--profile') + 1];
+  const prof = JSON.parse(readFileSync(join(here, '../config/profiles', `${name}.json`), 'utf8'));
+  for (const [k, v] of Object.entries(prof)) if (!k.startsWith('_')) base[k] = v;
+  console.log(`profil ${name}: ${Object.keys(base).join(', ')}`);
+}
 rest.forEach((a, i) => {
   if (a !== '--set') return;
   const [k, v] = rest[i + 1].split('=');

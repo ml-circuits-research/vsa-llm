@@ -5,6 +5,7 @@ import { rng } from '../core/rng.mjs';
 import { g11 } from './g11.mjs';
 import { gpara } from './gpara.mjs';
 import { gblind } from './gblind.mjs';
+import { gblind2 } from './gblind2.mjs';
 import { babi2Set } from './babi.mjs';
 
 export const NAMES = ['Ana', 'Maria', 'Ion', 'Elena', 'Mihai', 'Radu', 'Ioana', 'Dan', 'Paul', 'Vlad'];
@@ -167,6 +168,7 @@ export function generateSet(name, seed = 1, opts = {}) {
     case 'G11': return g11(R);
     case 'GPARA': return gpara(R);
     case 'GBLIND': return gblind(R);
+    case 'GBLIND2': return gblind2(R);
     case 'BABI2': return babi2Set(seed);
     default: throw new Error(`set necunoscut ${name}`);
   }

@@ -310,3 +310,77 @@ Măsuri:
 2. clasele care unesc sensuri cu aceleași tipuri dar funcții diferite.
 
 Ambele trebuie rezolvate înaintea lacunelor din PROPUNERI_LACUNE.md. Verificarea se va face pe un set orb nou (GBLIND2), proiectat înainte de reparații.
+
+## Testul de decizie pe GBLIND2: preînregistrare (scrisă înainte de rulare)
+
+**Context.** După GBLIND, reparațiile s-au făcut pe GBLIND, care e de acum set văzut:
+- D21: curriculumul pe niveluri;
+- D22: alternativele încearcă și grupuri numai din înșiruiri;
+- D23: subgrupurile abstracte după o coloană;
+- judecata unică în biți (descrierea totală);
+- clasele surori disjuncte la inducție.
+
+Pe GBLIND, sămânța 1: QA pe testul obișnuit a urcat de la 17% la 39–56%, iar pe poveștile puse deoparte de la 14% la 24%. Numerele sunt mici, deci zgomotoase.
+
+**Setul.** GBLIND2 (`src/data/gblind2.mjs`), proiectat de un subagent care nu a avut acces la mecanism și nerulat până acum. Are:
+- vocabular nou și 2–4 fapte pe poveste;
+- câte două formulări de întrebare pentru fiecare sens;
+- trei sensuri-capcană (LEAVE, DREAM, PAINT).
+
+**Configurări, fiecare rulată o singură dată, pe semințele 1–3:**
+- **G0 (implicit):** `node src/cli.mjs experiment BLIND --seed N --set blindSet=GBLIND2`
+- **GF (tot ce s-a adăugat):** în plus `--set levelCurriculum=true --set altSeqGroups=true --set splitAbstract=true --set slotTypes=true --set concepts=true --set induction=true --set maxDeepPasses=80`
+
+**Criteriile de trecere pentru GF, pe toate cele 3 semințe:**
+- QA pe poveștile puse deoparte ≥ 70%;
+- reformulări cu aceeași ecuație ≥ 60%;
+- capcane contopite 0%.
+
+**Așteptare declarată dinainte:** pe GBLIND, GF dă doar 24% pe poveștile puse deoparte, deci probabil pică. Contează cât câștigă GF față de G0, adică dacă reparațiile sunt generale și nu potrivite pe GBLIND.
+
+## Testul de decizie pe GBLIND2: rezultate (rulat o singură dată)
+
+| Configurare | Sămânța | Reformulări cu aceeași ecuație | Capcane contopite | QA puse deoparte | Clase |
+|---|---|---|---|---|---|
+| G0 implicit | 1 | 1% (134) | 0% (118) | 6% (54) | 0 |
+| G0 implicit | 2 | 0% (128) | 0% (101) | 9% (53) | 0 |
+| G0 implicit | 3 | 3% (144) | 0% (96) | 11% (53) | 0 |
+| GF tot | 1 | **100%** | 0% | 31% | 5 |
+| GF tot | 2 | 65% | **50%** | 13% | 5 |
+| GF tot | 3 | 58% | **38%** | 21% | 5 |
+
+**Concluzie preînregistrată: GF pică.** QA e sub 70% pe toate semințele, iar capcanele se contopesc pe semințele 2 și 3.
+
+**Ce s-a generalizat totuși** (față de G0, pe date nevăzute):
+- Unificarea reformulărilor: 1–3% → 58–100%.
+- Clasele găsite: THING = {wields, snatched, keeps}; cele două formulări ale aceleiași întrebări într-o clasă; PLACE cu forma rară, pe sămânța 1.
+- Inducția respinge corect „painted” pentru THING.
+
+**Diagnostic** (după rulare; GBLIND2 devine set văzut):
+- Contopirea PLACE + {is leaving, dreams of} pornește dintr-o coloană cu doar 2 rânduri ({dreams of, rests in}).
+- Apoi se înlănțuie prin refolosire: criteriul măsura formele comune față de mulțimea mai mică, deci o singură formă comună ajungea ({a,b} + {b,c} + …).
+- Clasa amestecată face regulile ambigue. De exemplu, „două fapte despre x, răspunsul e al doilea” se potrivește și când al doilea e capcana.
+- Reparația propusă: D24, refolosirea după Jaccard (pe reuniune).
+
+## Pasul 2 din ALGORITM.md: profilul `--profile algoritm` (seturi văzute, verificare)
+
+Profilul: `config/profiles/algoritm.json` (D21–D26). Toate seturile de mai jos sunt deja văzute, deci e o verificare, nu un test orb.
+
+| Set | Măsura | Implicit | Profil ALGORITM (semințele 1/2/3) |
+|---|---|---|---|
+| Blocul A | A1 (biți)–A6, G10 | trec | trec, inclusiv A4 (după D26) |
+| | A7 (propoziții între fapt și întrebare) | 1 / 2 / 5 | **1 / 5 / 5** |
+| GPARA (sămânța 1) | reformulări / capcane / QA puse deoparte | 58% / 0% / 63% | **100% / 0% / 100%** |
+| BABI2 (sămânța 1) | QA | 45% | **31%** (mai prost) |
+| GBLIND | reformulări | 9 / 5 / 47% | **100 / 100 / 100%** |
+| | capcane contopite | 0 / 0 / 71% | **0 / 0 / 0%** |
+| | QA puse deoparte | 14 / 7 / 14% | **60 / 56 / 69%** |
+| GBLIND2 | reformulări | 1 / 0 / 3% | **78 / 82 / 60%** |
+| | capcane contopite | 0 / 0 / 0% | 0 / 0 / 0% |
+| | QA puse deoparte | 6 / 9 / 11% | **30 / 28 / 23%** |
+
+**Ce rămâne:**
+- **QA pe GBLIND2.** Regulile au lungime fixă, iar poveștile cu 3–4 fapte rămân fără regulă. Remediul e O6, mulțimea de fapte.
+- **BABI2.** „Ultimul fapt despre X” cere timpul, nu doar „oricare fapt”. Tot O6 îl rezolvă, cu timpul ca rol.
+
+Până atunci, profilul nu devine implicit.

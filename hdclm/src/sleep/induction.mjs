@@ -46,6 +46,9 @@ export function inductionCandidates(mem) {
       if (!ok) continue;
       for (const d of h.members) {
         if (f.align[d]) continue;
+        // clasele surori sunt disjuncte: o formă confirmată deja într-o altă clasă vie nu intră și în aceasta
+        // (ierarhia se ține prin `isa`, nu prin suprapunere)
+        if (classes.some((G) => G !== F && G !== H && mem.isLive(G) && mem.atoms[G].def.align[d])) continue;
         const al = h.align[d].map((hr) => map.get(hr));
         if (al.some((r) => r === undefined)) continue;
         out.push({ F, H, form: d, align: al });
