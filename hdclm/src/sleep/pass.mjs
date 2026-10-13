@@ -36,23 +36,26 @@ export function sleepPass(mem, cfg, opts = {}) {
   // Pachetul se aplică pe o copie; dacă totalul real crește, iese propunerea cu cel mai mic câștig.
   let pkg = judge.build(accepted);
   let exactChecks = 0, removed = 0;
-  for (;;) {
-    if (!pkg.rewrites.length) break;
-    const m = mem.clone();
-    m.frozen = true;
-    m.commit(pkg, { check: false });
-    exactChecks++;
-    if (total(m, measure) <= before + 1e-9) break;
-    let worst = null, wg = Infinity;
-    for (const p of judge.props) {
-      if (!accepted.has(p.pattern)) continue;
-      const g = judge.gain(p.pattern, accepted);
-      if (g < wg - 1e-9) [wg, worst] = [g, p.pattern];
+  const exactCheck = () => {
+    for (;;) {
+      if (!pkg.rewrites.length) break;
+      const m = mem.clone();
+      m.frozen = true;
+      m.commit(pkg, { check: false });
+      exactChecks++;
+      if (total(m, measure) <= before + 1e-9) break;
+      let worst = null, wg = Infinity;
+      for (const p of judge.props) {
+        if (!accepted.has(p.pattern)) continue;
+        const g = judge.gain(p.pattern, accepted);
+        if (g < wg - 1e-9) [wg, worst] = [g, p.pattern];
+      }
+      for (const x of judge.closure(worst, accepted)) accepted.delete(x);
+      removed++;
+      pkg = judge.build(accepted);
     }
-    for (const x of judge.closure(worst, accepted)) accepted.delete(x);
-    removed++;
-    pkg = judge.build(accepted);
-  }
+  };
+  exactCheck();
   // judecata unică și în trecerea obișnuită (D25, ALGORITM.md §3): tiparele noi și cele ale căror alegeri sau clase
   // se lărgesc nu au voie să facă descrierea totală mai lungă prin predicția unităților pe care le revendică nou.
   // Dacă pachetul pică, iese propunerea cu cea mai mare scumpire a predicției (cu tot ce depinde de ea).
@@ -84,6 +87,8 @@ export function sleepPass(mem, cfg, opts = {}) {
       for (const x of judge.closure(worst, accepted)) accepted.delete(x);
       removed++;
       pkg = judge.build(accepted);
+      // pachetul s-a schimbat: verificarea exactă din nou (fără ea, totalul poate crește, I8)
+      exactCheck();
     }
   }
   mem.commit(pkg);
