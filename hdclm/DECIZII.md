@@ -231,3 +231,54 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
   - Locurile pentru propoziții-distractor acceptă doar propozițiile văzute (o alegere de unități), nu „orice fapt”. Asta explică majoritatea greșelilor HAVE rămase.
   - Ciclul de inducție (ipoteză → test prin reguli → rafinare sau despărțire) nu e încă explicit.
   - De decis dacă devine implicit, după blocul A cu `concepts: true`.
+
+## D18. Alegeri tipizate: tipul unui loc este un concept (`slotTypes`, opțional)
+
+- **Context.** Un loc acceptă doar valorile văzute. O propoziție-distractor nouă nu se potrivește cu regula, chiar dacă e de un fel cunoscut.
+- **Ales.**
+  - O alegere poate deveni tipizată (`typed`): membrii ei pot fi tipare sau clase și înseamnă „orice aplicare a lor”. Câte valori acoperă alegerea, pentru măsura în biți, se numără din aplicările tipurilor.
+  - Liveness: tipurile acceptate de un tipar viu rămân vii.
+  - La commit, o valoare pe care tipul nu o mai acoperă rămâne membru direct (I6).
+  - Trecerea de tipuri (`src/sleep/types.mjs`) propune tipizarea, iar judecata unică (D20) decide.
+- **Dovezi.**
+  - Fără gardă: pe GPARA, QA 88/76/94% (față de 84/76/92%), dar pe BABI2 QA scade de la 48–52% la 32–37%. O „deplasare oarecare” ca distractor acceptă și mutarea aceleiași persoane.
+  - Cu judecata unică: pe GBLIND, două tipizări acceptate.
+- **Revizuire.** Rămâne de remăsurat BABI2 cu judecata unică.
+
+## D19. Inducția: ipotezele testate prin consecințe (`induction`, opțional)
+
+- **Ales.** O ipoteză de concept care cuprinde strict o clasă vie propune formele în plus. Fiecare formă se testează pe o copie (adăugare, apoi somn) față de un martor identic fără adăugare, prin judecata unică. Clasele surori rămân disjuncte: o formă confirmată deja într-o altă clasă vie nu e propusă.
+- **Dovezi.** Pe GBLIND, sămânța 1, inducția **nu a avut candidați** în rularea finală. „is sitting in” a intrat în clasa LOC prin ridicare, nu prin inducție (o afirmație anterioară în conversație era greșită). Într-o rulare anterioară, fără disjuncție, „is in” intrase și în clasa capcanelor; de aici regula disjuncției.
+- **Revizuire.** Inducția nu e încă dovedită pe date.
+
+## D20. Judecata unică a generalizărilor
+
+- **Ales.** Orice lărgire (tipizare, adăugare la clasă) se judecă la fel, pe o copie (`src/sleep/generalize.mjs`):
+  - **MDL:** câștigul exact al memoriei;
+  - **contraexemple:** biții de predicție ai unităților văzute pe care schimbarea le revendică nou;
+  - **validare:** eroarea pe textul de validare, dacă există.
+- **Criteriul.** În biți, schimbarea trece dacă câștigul minus scumpirea predicției este > 0 (descrierea totală) și validarea nu crește. În termeni, predicția nu are voie să se strice deloc.
+- **Corectură.** Prima variantă cerea „predicția nu se strică deloc” și în biți. A respins orice tipizare, pentru că o generalizare redistribuie mereu probabilitatea.
+- **Alte schimbări legate:**
+  - gruparea conceptuală (D17) folosește doar clase vii;
+  - regula ad-hoc „o ipoteză cere ≥ 2 roluri” a fost scoasă;
+  - pragurile conceptelor vin din θ_merge.
+
+## D21. Curriculumul pe niveluri (`levelCurriculum`, opțional)
+
+- **Context.** Pe GBLIND, regulile de poveste se construiau peste forme de propoziție „pe loc” (`[Bram S in the office .]`), apărute devreme. Apoi le blocau, prin cuibărire.
+- **Ales.** Fiecare nivel doarme până se stabilizează (treceri și alternative cu `maxLevel`) înainte să se construiască nivelul de deasupra.
+- **Dovezi.** Singur, propozițiile ies toate cu forme generale, dar nu apare nicio regulă de poveste. Cauza e D22.
+
+## D22. Alternativele încearcă și grupuri numai din înșiruiri (`altSeqGroups`, opțional)
+
+- **Context.** Trecerea obișnuită ia întâi grupurile cu mai puține poziții libere, cum cere specificația. Grupurile mici își iau unitățile, apoi sunt respinse, și asta la fiecare trecere. Alternativele luau în calcul doar grupuri cu unități deja rescrise, așa că grupul mare (+390 de biți pe GBLIND) nu era încercat de nimeni.
+- **Ales.** Când trecerea obișnuită se blochează, alternativele încearcă și grupurile de înșiruiri. Decide câștigul exact.
+- **Dovezi.** Împreună cu D21, pe GBLIND apare prima regulă generală de poveste (folosită de 22 de ori). QA pe testul obișnuit urcă de la 17% la 39%.
+
+## D23. Despărțirea grupurilor abstracte după o coloană (`splitAbstract`, opțional)
+
+- **Context.** Grupurile abstracte amestecau poveștile despre loc cu cele despre obiect, pentru că au aceeași structură a repetițiilor. Coloana faptului nu se putea ridica.
+- **Ales.** Pe lângă fiecare grup abstract se propun subgrupuri, câte unul pentru fiecare tipar (sau clasă vie) al unei coloane, cu cel puțin m_min unități. Alege câștigul exact.
+- **Dovezi.** Pe GBLIND apar 4 reguli generale. QA pe testul obișnuit 44%, pe poveștile puse deoparte 17%.
+- **Notă.** Toate dovezile D21–D23 sunt pe GBLIND, de acum set văzut. Testul de generalitate este GBLIND2 (preînregistrat în REZULTATE.md).
