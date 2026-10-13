@@ -284,3 +284,29 @@ Măsuri:
 - capcane contopite (LOC/LOOK, LOC/NEG);
 - QA pe poveștile puse deoparte, pe sens și pe capcană;
 - numărul de tipare și de clase.
+
+## Controlul orb GBLIND: rezultate (rulat o singură dată, nimic reparat după)
+
+| Configurare | Sămânța | Reformulări cu aceeași ecuație | Capcane contopite | QA puse deoparte | Tipare | Clase |
+|---|---|---|---|---|---|---|
+| B0 implicit | 1 | 9% (129) | 0% (61) | 14% (58) | 33 | 0 |
+| B0 implicit | 2 | 5% (109) | 0% (78) | 7% (57) | 30 | 0 |
+| B0 implicit | 3 | 47% (106) | **71%** (78) | 14% (58) | 33 | 1 |
+| B1 concepte | 1 | 9% | 0% | 14% | 33 | 0 |
+| B1 concepte | 2 | 5% | 0% | 5% | 30 | 0 |
+| B1 concepte | 3 | 20% | **27%** | 10% | 35 | 1 |
+
+**Concluzie: pică.** Unificarea reformulărilor și regulile de poveste nu se generalizează pe setul orb. Conceptele (B1) nu schimbă nimic important. Pe sămânța 3, B0 face o contopire falsă LOC+LOOK+NEG, iar B1 una LOC+LOOK.
+
+**Diagnostic** (după rulare, fără reparații; GBLIND devine de acum set văzut):
+- **Învățare față de generalizare** (sămânța 1, B0): QA 85% pe poveștile de antrenare, dar 17% pe poveștile de test obișnuite și 14% pe cele puse deoparte. Sistemul memorează, nu generalizează.
+- **Nivelul propozițiilor iese bine.** Apar toate formele generale (`[S is in the S .]`, `[S is not in the S .]`, `[S looked at the S .]`, `[S grabbed the S .]` …) și cele două întrebări.
+- **Nivelul poveștilor pică.** Nu apare nicio regulă generală de tipul `[LOC(x,p), S, In which room is x?, p]`, doar 11 reguli mici (2–3 folosiri), legate de anumite propoziții.
+- **Cauza probabilă, aceeași ca pe BABI2 (D15, Revizuire).** Unele propoziții au ca rescriere principală forme „pe loc”: `[Bram S in the office .]`, `[S S in the kitchen .]`. Astfel, aceeași coloană a poveștii conține aplicări ale unor tipare diferite, iar ridicarea pică. Pe GPARA, efectul a fost mai mic.
+- **Contopirea falsă** (sămânța 3) vine prin `classLift`: LOC, LOOK și NEG primesc aceleași feluri de valori, iar cuvintele prin care diferă nu se repetă în restul poveștii. Criteriul 2 din D15 nu le oprește, cum anticipa analiza din PROPUNERI_LACUNE.md.
+
+**Ce înseamnă.** Rezultatele bune de pe GPARA (D15–D17) au fost în mare parte potrivite pe acel set. Problemele de bază sunt două:
+1. alegerea rescrierii principale a propozițiilor, care fragmentează regulile;
+2. clasele care unesc sensuri cu aceleași tipuri dar funcții diferite.
+
+Ambele trebuie rezolvate înaintea lacunelor din PROPUNERI_LACUNE.md. Verificarea se va face pe un set orb nou (GBLIND2), proiectat înainte de reparații.
