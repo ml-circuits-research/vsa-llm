@@ -41,5 +41,6 @@
   "splitAbstract": false,
   "classJaccard": false,
   "judgeAll": false,
-  "formRepeat": true
+  "formRepeat": true,
+  "selectionCost": false
 }

@@ -65,6 +65,9 @@ export function alternativePass(mem, cfg, { maxLevel = LEVELS } = {}) {
       if (gain > 1e-9 && (!best || gain > best.gain + 1e-9)) best = { gain, pkg, key: g.key, level };
     }
   }
+  // D26: alegerea celui mai bun dintre N candidați costă log2(N) biți (numele candidatului ales). Un câștig mai mic
+  // e la nivelul unei repetiții întâmplătoare găsite prin căutare (de exemplu pe text fără structură, A4).
+  if (best && cfg.selectionCost && measure === 'bits' && best.gain <= Math.log2(Math.max(2, tried.length))) best = null;
   if (!best) {
     mem.frozen = false;
     return { before, after: before, changed: false, tried: tried.length };
