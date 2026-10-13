@@ -6,7 +6,9 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const [cmd, what = 'A', ...rest] = process.argv.slice(2);
+const [cmd, ...args] = process.argv.slice(2);
+const what = args[0] && !args[0].startsWith('--') ? args[0] : 'A';
+const rest = cmd === 'experiment' && what === args[0] ? args.slice(1) : args;
 const seed = rest.includes('--seed') ? Number(rest[rest.indexOf('--seed') + 1]) : 1;
 // --set cheie=valoare (repetabil): suprascrie parametri din config/default.json
 // --profile nume: config/profiles/<nume>.json, aplicat înaintea lui --set
@@ -23,7 +25,10 @@ rest.forEach((a, i) => {
   base[k] = v === 'true' ? true : v === 'false' ? false : isNaN(Number(v)) ? v : Number(v);
 });
 
-if (cmd === 'experiment') {
+if (cmd === 'chat') {
+  const { startChat } = await import('./chat.mjs');
+  await startChat({ seed, base, args: rest });
+} else if (cmd === 'experiment') {
   const BLOCK_A = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7'];
   const list = what.split(',').flatMap((x) => (x === 'A' ? BLOCK_A : [x]));
   for (const e of list) {
@@ -34,5 +39,5 @@ if (cmd === 'experiment') {
     console.log(`${e}: ${r.decision}   (${((performance.now() - t0) / 1000).toFixed(1)} s)`);
   }
 } else {
-  console.log('folosire: node src/cli.mjs experiment [A|A1,A2,...] [--seed N]');
+  console.log('folosire: node src/cli.mjs experiment [A|A1,A2,...] [--seed N]\n          node src/cli.mjs chat [--demo G7|--empty|--load fisier.txt] [--profile algoritm]');
 }

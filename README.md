@@ -17,8 +17,51 @@ git clone https://github.com/ml-circuits-research/vsa-llm
 cd vsa-llm && git checkout ccr-452dc26f-vdua28      # branch-ul de lucru
 cd hdclm
 
-node --test test/*.test.mjs                          # 75 de teste (câteva minute); nu „node --test test/” pe Node 22
+npm test                                           # regresii + obiective semantice (intenționat roșii acum)
+npm run test:unit                                  # numai regresiile mecanismelor și evaluatorului
+npm run eval:goals -- --out runs/goals-v1            # evaluare a țintei generale pe semințele 1,2,3
 ```
+
+**Ținta generală este fixată prin TDD în [hdclm/GOALS.md](hdclm/GOALS.md).** Suita cere canonizare pe intrări nevăzute, grafuri semantice compoziționale, negație și cuantificare, ambiguitate, text liber în mai multe domenii și raționament numai peste grafuri. Eșecurile sunt aserțiuni reale, fără `skip`/`todo`, și intră în `npm test`. Acest set este public de dezvoltare, nu un benchmark orb.
+
+### Chat CLI: vezi ce poate modelul acum
+
+Din rădăcina proiectului:
+
+```bash
+npm --prefix hdclm run chat
+npm --prefix hdclm run chat -- --profile algoritm
+npm --prefix hdclm run chat -- --empty
+npm --prefix hdclm run chat -- --load ./corpus.txt --max-tokens 24
+```
+
+Implicit se antrenează pe partea de antrenare a setului sintetic G7, apoi afișează o întrebare de test pe care o poți încerca. Folosește mecanismul existent de tipare și variabile, local, fără LLM extern. Răspunsul este completarea unei reguli învățate, cu argumentele și finalul păstrate împreună. Dacă nu există o completare determinată sau regulile propun răspunsuri diferite, chatul spune că nu poate determina răspunsul. Nu are încă înțelegerea conversațională a unui chatbot general. Memoria sesiunii nu se salvează automat.
+
+Exemple în sesiune:
+
+```text
+Ana has the book. Who has the book?
+/why
+/context
+Ana has the pen.
+Who has the pen?
+/context
+/next Ana has the book. Who has the book?
+/continue Ana has the book. Who has the book?
+/inspect Ana has the book.
+/patterns
+/stats
+/teach Ada reads the report.
+/teach Boris reads the report.
+/sleep
+/next Ada reads the
+/help
+/quit
+```
+
+Întrebările se termină cu `?`. Celelalte mesaje se păstrează în contextul conversației, fără antrenare; astfel poți introduce un enunț și apoi pune întrebarea separat. `/why` afișează regulile folosite sau motivul abținerii. Acest control al interfeței nu este o regulă semantică despre vocabular.
+
+`/continue TEXT` folosește generarea liberă de tokeni, care poate fi incoerentă. `/next` afișează primii 5 tokeni și probabilitățile. `/inspect` arată vocabularul cunoscut, tiparele recunoscute, umplerile și cheile canonice actuale; acestea nu sunt încă grafuri semantice complete. `UNK` înseamnă token necunoscut, iar `EOT` sfârșitul textului. `/context TEXT` setează contextul fără să îl învețe; `/context` îl șterge. `/load CALE` citește un fișier UTF-8, iar `/sleep` caută tipare. Întrebările și continuările generate nu se adaugă la antrenare. `/demo G8` înlocuiește memoria cu alt set sintetic; `/reset` o golește.
 
 **Experimentele** scriu în `runs/<experiment>/result.json`. `runs/` nu e în git. Cu `HDCLM_TAG=nume`, rezultatele merg în `runs/nume/<experiment>/`.
 

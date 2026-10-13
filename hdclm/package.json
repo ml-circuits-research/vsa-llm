@@ -6,7 +6,12 @@
   "private": true,
   "engines": { "node": ">=20" },
   "scripts": {
-    "test": "node --test test/*.test.mjs",
+    "test": "npm run test:unit && npm run test:goals",
+    "test:unit": "node --test test/*.test.mjs",
+    "test:goals": "node test/goals/formalization.test.mjs",
+    "test:all": "npm test",
+    "eval:goals": "node src/eval/goals/run.mjs",
+    "chat": "node src/cli.mjs chat",
     "experiment": "node src/cli.mjs experiment"
   }
 }

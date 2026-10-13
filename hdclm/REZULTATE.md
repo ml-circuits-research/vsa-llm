@@ -384,3 +384,27 @@ Profilul: `config/profiles/algoritm.json` (D21–D26). Toate seturile de mai jos
 - **BABI2.** „Ultimul fapt despre X” cere timpul, nu doar „oricare fapt”. Tot O6 îl rezolvă, cu timpul ca rol.
 
 Până atunci, profilul nu devine implicit.
+
+## TDD: ținta formalizării generale, 2026-10-13
+
+Definiția cerințelor și protocolul sunt în `GOALS.md`; implementarea evaluatorului este în `src/eval/goals/`. Set **public de dezvoltare**, nu orb. Nu s-a modificat algoritmul modelului pentru a îndeplini aceste cerințe.
+
+Comanda: `npm run eval:goals -- --out runs/goals-v1`, profilul `algoritm`, semințele 1,2,3. Corpus fix: 41 documente de antrenare; 49 intrări unice de evaluare, dintre care 46 nu sunt documente identice de antrenare. Cele trei semințe nu sunt trei corpusuri independente.
+
+Pe fiecare sămânță: **3/31 cerințe trec, 28/31 pică**. Trec distincția între două exemple de antrenare cu argumente diferite, distincția dintre cele două forme ale negației peste credință și verificarea că evaluarea nu modifică memoria. Aceste treceri nu demonstrează singure semantică corectă: cheile unor tipare diferite pot distinge propozițiile fără o reprezentare compozițională.
+
+Adaptorul actual returnează chei canonice pentru 8/49 intrări; **0 grafuri semantice exportate**, 0 erori de execuție. Cele 8 canonizări sunt recunoașteri ale implementării actuale, nu o măsură de acuratețe semantică. Eșec concret: `Every reviewer read a report.` și `A reviewer read every report.` primesc aceeași cheie `P179(_,_)`, deși au cuantificatori cu domenii diferite.
+
+Nu trec canonizarea activ/pasiv pe combinații nevăzute, vocabularul deschis, ambiguitatea, exportul de frame-uri/grafuri, textul liber, reconstrucția exactă cu spații arbitrare și raționamentul numai peste grafuri. Unele cerințe se opresc la lipsa formalizării premiselor; asta nu reprezintă o evaluare izolată a unui motor de raționament implementat.
+
+Suita de acceptare conține aserțiuni reale, fără `skip`/`todo`, și este inclusă în `npm test`. `npm run test:unit` rămâne verificarea separată a regresiilor. Raportul JSON local este în `runs/goals-v1/result.json` (directorul `runs/` nu este în git).
+
+## Chat: completarea răspunsului ca ecuație, 2026-10-13
+
+Regresie observată în CLI: după `Ana has the pen. Who has the pen?`, primul token probabil era corect (`Ana`), dar generarea liberă producea `Ana has the ball.`. Aserțiunea veche verifica numai primul cuvânt, deci nu surprindea eroarea. Testul cere acum răspunsul complet `Ana.` și a fost rulat întâi pe implementarea veche, unde a eșuat.
+
+`src/predict/complete.mjs` completează întregul sufix al unui tipar învățat la nivel de paragraf/document. Folosește recunoașterea și legarea existente, păstrează variabilele până la redarea textului și acceptă numai completări determinate, fără membri noi prin asemănare. Nu conține vocabularul sarcinilor sau reguli de limbă. Dacă nu există completare sau regulile dau rezultate diferite, chatul se abține. Generarea liberă rămâne disponibilă prin `/continue` și predictorul original nu a fost schimbat.
+
+Verificare în `test/chat.test.mjs`: **90/90 răspunsuri complete corecte** pe combinațiile held-out de test din G7 și G8, semințele 1,2,3, configurarea implicită. Seturile sunt deja văzute în dezvoltare: aceasta este o regresie funcțională, nu o dovadă nouă de generalitate. Cele 8 teste de chat verifică și răspunsuri cu mai multe cuvinte, conversație în două mesaje, lipsa antrenării pe conversație, abținerea pentru întrebări nesuportate și pentru reguli contradictorii, plus intrare CLI scriptată.
+
+CLI-ul păstrează enunțurile în context temporar și recunoaște întrebările după `?`; acest protocol de interfață nu formalizează semantic întrebările arbitrare. Nu s-au implementat grafurile semantice generale sau raționamentul peste ele. Cerințele generale rămân active și roșii.
