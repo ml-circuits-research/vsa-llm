@@ -361,3 +361,26 @@ Pe GBLIND, sămânța 1: QA pe testul obișnuit a urcat de la 17% la 39–56%, i
 - Apoi se înlănțuie prin refolosire: criteriul măsura formele comune față de mulțimea mai mică, deci o singură formă comună ajungea ({a,b} + {b,c} + …).
 - Clasa amestecată face regulile ambigue. De exemplu, „două fapte despre x, răspunsul e al doilea” se potrivește și când al doilea e capcana.
 - Reparația propusă: D24, refolosirea după Jaccard (pe reuniune).
+
+## Pasul 2 din ALGORITM.md: profilul `--profile algoritm` (seturi văzute, verificare)
+
+Profilul: `config/profiles/algoritm.json` (D21–D26). Toate seturile de mai jos sunt deja văzute, deci e o verificare, nu un test orb.
+
+| Set | Măsura | Implicit | Profil ALGORITM (semințele 1/2/3) |
+|---|---|---|---|
+| Blocul A | A1 (biți)–A6, G10 | trec | trec, inclusiv A4 (după D26) |
+| | A7 (propoziții între fapt și întrebare) | 1 / 2 / 5 | **1 / 5 / 5** |
+| GPARA (sămânța 1) | reformulări / capcane / QA puse deoparte | 58% / 0% / 63% | **100% / 0% / 100%** |
+| BABI2 (sămânța 1) | QA | 45% | **31%** (mai prost) |
+| GBLIND | reformulări | 9 / 5 / 47% | **100 / 100 / 100%** |
+| | capcane contopite | 0 / 0 / 71% | **0 / 0 / 0%** |
+| | QA puse deoparte | 14 / 7 / 14% | **60 / 56 / 69%** |
+| GBLIND2 | reformulări | 1 / 0 / 3% | **78 / 82 / 60%** |
+| | capcane contopite | 0 / 0 / 0% | 0 / 0 / 0% |
+| | QA puse deoparte | 6 / 9 / 11% | **30 / 28 / 23%** |
+
+**Ce rămâne:**
+- **QA pe GBLIND2.** Regulile au lungime fixă, iar poveștile cu 3–4 fapte rămân fără regulă. Remediul e O6, mulțimea de fapte.
+- **BABI2.** „Ultimul fapt despre X” cere timpul, nu doar „oricare fapt”. Tot O6 îl rezolvă, cu timpul ca rol.
+
+Până atunci, profilul nu devine implicit.
