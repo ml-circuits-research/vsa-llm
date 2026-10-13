@@ -1,4 +1,4 @@
-import { conceptIndex } from '../memory/meaning.mjs';
+import { liveClassIndex } from '../memory/meaning.mjs';
 import { strategyFor, VectorView } from '../memory/vectors.mjs';
 import { findLift } from './propose.mjs';
 // Pasul 2: gruparea unităților care au aceiași copii, în afară de câteva poziții libere F.
@@ -52,7 +52,8 @@ function slotsAfter(ctx, units, F) {
 // toate grupurile valide, în ordinea de luare (fără atribuirea lacomă a unităților)
 export function candidateGroups(ctx, units, level) {
   const { mem, cfg } = ctx;
-  const conceptOf = cfg.concepts ? conceptIndex(mem) : null;
+  // D20: doar clasele judecate (vii, adică folosite de reguli acceptate); ipotezele nejudecate nu grupează
+  const conceptOf = cfg.concepts ? liveClassIndex(mem) : null;
   const buckets = new Map();
   const subsetCache = new Map();
   for (const u of units) {

@@ -67,7 +67,7 @@ export function deepSleep(mem, cfg, opts = {}) {
     // inducția (D19): ipotezele care cuprind o clasă confirmată se testează prin consecințe, de cel mult două ori
     if (cfg.concepts && cfg.induction && inductionDone < 2) {
       inductionDone++;
-      const t = inductionPass(mem, cfg);
+      const t = inductionPass(mem, cfg, { validate: opts.validate });
       const irec = { pass: i + 1, kind: 'induction', ...stats(mem, cfg.measure), changed: t.changed, accepted: t.accepted, tried: t.tried };
       passes.push(irec);
       opts.log?.(irec);
@@ -76,7 +76,7 @@ export function deepSleep(mem, cfg, opts = {}) {
     // apoi tipurile locurilor (D18): alegeri de aplicări -> alegeri tipizate, de cel mult cfg.typeRounds ori
     if (cfg.slotTypes && typeRounds < (cfg.typeRounds ?? 2)) {
       typeRounds++;
-      const t = typePass(mem, cfg);
+      const t = typePass(mem, cfg, { validate: opts.validate });
       const trec = { pass: i + 1, kind: 'types', ...stats(mem, cfg.measure), changed: t.changed, retyped: t.retyped };
       passes.push(trec);
       opts.log?.(trec);

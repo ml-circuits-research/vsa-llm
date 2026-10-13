@@ -39,10 +39,7 @@ export function conceptPass(mem, cfg) {
     if (!c.extent.every((p) => mem.atoms[p].def.slots.length === k)) continue;
     const types = [...Array(k).keys()].map((j) => [...c.intent].find((a) => a.startsWith(`T${j}:V`))?.slice(`T${j}:V`.length));
     if (types.some((t) => t === undefined || !catChoice.has(Number(t)))) continue; // roluri fără tip curat
-    // o ipoteză (fără dovadă funcțională) cere cel puțin două roluri tipizate: un singur tip comun
-    // („e vorba de o persoană”) e o dovadă prea slabă pentru a uni forme
-    const functionalIntent = [...c.intent].some((a) => a.startsWith('F:'));
-    if (!functionalIntent && k < 2) continue;
+    // (D20) nicio regulă despre câte roluri are o ipoteză: ipotezele nu se folosesc decât după judecata unică
     if (classes.some((x) => sameSet(mem.atoms[x].def.members, c.extent))) continue;
     // alinierea: locul j al fiecărui membru merge la rolul cu același tip (aici, aceeași ordine)
     const cls = ref--;

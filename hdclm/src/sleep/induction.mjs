@@ -5,9 +5,11 @@
 // se oprește; pe o altă copie (martorul), același somn fără adăugare. Forma rămâne în clasă numai dacă memoria
 // cu ea este mai scurtă decât martorul: regulile clasei explică acum și datele formei noi.
 // Altfel ipoteza rămâne doar ierarhie (concept mai general, `isa`), fără unificare.
+// Judecata e cea unică (D20): MDL față de martor + contraexemple + validare.
 import { alternativePass } from './alternatives.mjs';
 import { sleepPass } from './pass.mjs';
 import { total } from '../memory/size.mjs';
+import { judgeGeneralization, patternsUsing } from './generalize.mjs';
 
 const EPS = 1e-9;
 
@@ -53,7 +55,7 @@ export function inductionCandidates(mem) {
   return out;
 }
 
-export function inductionPass(mem, cfg) {
+export function inductionPass(mem, cfg, { validate } = {}) {
   const rounds = cfg.inductionRounds ?? 6;
   const cands = inductionCandidates(mem);
   const tried = [];
@@ -65,10 +67,11 @@ export function inductionPass(mem, cfg) {
     const test = mem.clone();
     test.beginPass();
     test.commit({ classAdds: [{ cls: c.F, align: [[c.form, c.align]] }] }, { check: false });
-    const tTest = settle(test, cfg, rounds);
-    const gain = tBase - tTest;
-    tried.push({ cls: c.F, hypothesis: c.H, form: c.form, gain: +gain.toFixed(3) });
-    if (gain > EPS) {
+    settle(test, cfg, rounds);
+    // judecata unică (D20): martorul joacă rolul memoriei de acum
+    const J = judgeGeneralization(control, test, cfg, { patterns: patternsUsing(control, { cls: c.F }), validate, before: tBase });
+    tried.push({ cls: c.F, hypothesis: c.H, form: c.form, gain: +J.gain.toFixed(3), claimed: J.claimed, predDelta: +J.predDelta.toFixed(3), valDelta: +J.valDelta.toFixed(4) });
+    if (J.accept) {
       mem.beginPass();
       mem.commit({ classAdds: [{ cls: c.F, align: [[c.form, c.align]] }] });
       accepted++;

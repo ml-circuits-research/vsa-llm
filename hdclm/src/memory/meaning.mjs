@@ -86,3 +86,11 @@ export function conceptIndex(mem) {
   for (const c of cls) for (const m of mem.atoms[c].def.members) if (!idx.has(m)) idx.set(m, c);
   return idx;
 }
+
+// clasa vie cea mai mică a fiecărui tipar (doar clase folosite de reguli acceptate)
+export function liveClassIndex(mem) {
+  const idx = new Map();
+  const cls = mem.allOfType('PCLASS').filter((c) => mem.isLive(c)).sort((a, b) => mem.atoms[a].def.members.length - mem.atoms[b].def.members.length || a - b);
+  for (const c of cls) for (const m of mem.atoms[c].def.members) if (!idx.has(m)) idx.set(m, c);
+  return idx;
+}
