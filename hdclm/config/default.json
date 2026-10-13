@@ -36,5 +36,6 @@
   "conceptsFirst": false,
   "slotTypes": false,
   "induction": false,
-  "levelCurriculum": false
+  "levelCurriculum": false,
+  "altSeqGroups": false
 }

@@ -40,7 +40,9 @@ export function alternativePass(mem, cfg, { maxLevel = LEVELS } = {}) {
     if (units.length < 2) continue;
     const probe = new PassContext(mem, cfg);
     const cands = candidateGroups(probe, units, level)
-      .filter((g) => !reproduces(mem, g) && g.units.some((u) => mem.atoms[u].def.type === 'APP'))
+      // D22: și grupurile numai din înșiruiri; trecerea obișnuită le poate bloca prin ordinea ei (grupuri mici,
+      // respinse apoi, iau unitățile înaintea grupului mare); aici decide câștigul exact
+      .filter((g) => !reproduces(mem, g) && (cfg.altSeqGroups || g.units.some((u) => mem.atoms[u].def.type === 'APP')))
       .slice(0, cfg.altCandidates ?? 200);
     for (const g of cands) {
       const ctx = new PassContext(mem, cfg);
