@@ -391,6 +391,12 @@ export class Memory {
         if (!ch.includes(c)) ch.push(c);
       }
     for (const [u, alts] of pkg.alternatives ?? []) this.alternatives.set(u, alts);
+    // metadate de concept (trecerea de concepte): felul conceptului și părinții lui în ierarhie
+    for (const x of pkg.meta ?? []) {
+      const a = this.atoms[R(x.ref)];
+      if (x.concept) a.concept = x.concept;
+      if (x.isa) a.isa = x.isa.map(R);
+    }
     // 5. versiunea și invarianții
     this.version++;
     // pe copiile de măsurare (judecata exactă) verificarea se sare: commit-ul real o face oricum
@@ -403,7 +409,10 @@ export class Memory {
     if (a.kind === 'TOKEN') return { id: a.id, kind: a.kind, text: a.text, choices: a.choices };
     if (a.kind === 'STRUCT') return { id: a.id, kind: a.kind, pattern: a.pattern, accepts: a.accepts };
     const d = a.def.type === 'CHOICE' ? { type: 'CHOICE', members: [...a.def.members] } : a.def;
-    return { id: a.id, kind: a.kind, level: a.level, def: d, count: a.count, choices: a.choices };
+    const o = { id: a.id, kind: a.kind, level: a.level, def: d, count: a.count, choices: a.choices };
+    if (a.concept) o.concept = a.concept;
+    if (a.isa) o.isa = a.isa;
+    return o;
   }
   toJSONL() {
     return this.atoms.slice(1).map((a) => JSON.stringify(this.atomToJSON(a))).join('\n') + '\n';

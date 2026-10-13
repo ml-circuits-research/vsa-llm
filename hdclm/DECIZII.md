@@ -193,3 +193,39 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
 - **Ales.** Cheia folosește doar nivelul copilului; diferențele de lungime se rezolvă la ridicare (tipar comun, interpretări multiple sau clasă).
 - **Dovezi.** Pe sămânța 1, schimbarea singură: A5 100%, A6 100%, G10 100%, iar **A7 trece până la 5 propoziții între fapt și întrebare** (înainte: 1). Împreună cu clasele (D15), A7 dă 1 / 2 / 5 pe semințele 1–3: clasele anulează câștigul pe sămânța 1. Cauza nu e încă înțeleasă.
 - **Consecințe.** Grupuri mai eterogene; coloanele care nu se pot ridica devin locuri simple, iar judecata decide.
+
+## D17. Concepte din comportament (analiza formală a conceptelor) care ghidează gruparea (`concepts: true`, opțional)
+
+- **Context.** Întrebarea autorului: „dacă merge ca o rață și măcăne ca o rață…”. Sistemul vede din date că tipare diferite au aceeași intensiune (aceleași feluri de valori pe locuri, aceleași funcții în reguli), deci sunt același concept? Până la D16, clasele (D15) apăreau doar când o regulă ridica o coloană cu tipare diferite. Regula generală pentru HAVE nu apărea: gruparea abstractă amesteca fapte HAVE și MOVE, iar ridicarea pica.
+- **Ales.**
+  1. `src/memory/concepts.mjs` (doar citire):
+     - **concepte de valori**: valorile care apar în aceleași locuri, grupate cu legătură medie Jaccard ≥ 0,5. Dau persoane / locuri / obiecte fără nume date de noi.
+     - **profilul fiecărui tipar**: tipurile locurilor (după conceptele de valori) și funcțiile lui în reguli (loc legat de răspuns, de exemplu).
+     - **rețeaua de concepte închise**: intensiune ↔ extensiune, cu părinții direcți (`isa`).
+  2. `src/sleep/concepts.mjs` (`conceptPass`): pentru fiecare concept cu ≥ 2 tipare de aceeași aritate, cu roluri tipate, creează o clasă de tipare (PCLASS) marcată `concept: {kind, intent}`:
+     - `sens`: confirmat și de funcții în reguli;
+     - `ipoteză`: doar după tipuri. Ipotezele nu se folosesc dacă au sub 2 atribute.
+  3. Trecerea de concepte rulează după ce alternativele nu mai schimbă nimic, de cel mult `conceptRounds` (2) ori. Apoi somnul continuă.
+  4. În gruparea abstractă, un copil al cărui tipar principal e într-o clasă de concept are forma `k{clasă}`, nu doar nivelul. Unitățile cu fapte de același concept intră în același grup, iar cele cu concepte diferite nu se mai amestecă. Copiii fără concept păstrează forma după nivel (D16).
+- **Dovezi (FORMAL, GPARA, semințele 1/2/3).**
+
+  | Măsură | Fără concepte | Cu concepte |
+  |---|---|---|
+  | Reformulări cu aceeași ecuație | 58 / 71 / 79% | **79 / 76 / 84%** |
+  | QA pe poveștile puse deoparte | 63 / 57 / 46% | **84 / 63 / 94%** |
+  | Capcane MOVE/LEAVE contopite | 0% | 0% |
+
+  - Pe sămânța 1, clasa HAVE apare (has / picked up / holds, puritate 1) și cu ea regula generală `[HAVE(x,o), S, What does x have?, o]`, folosită de 14 ori. Fără concepte, clasa HAVE nu apărea.
+  - BABI2 nu se schimbă (45%).
+- **Ce s-a încercat și a picat (păstrat ca lecție).**
+  - **Concepte înaintea poveștilor (`conceptsFirst`, curriculum).** Ipotezele doar după tipuri au unit MOVE cu LEAVE (capcane contopite 100%). Concluzie: o ipoteză de tip trebuie confirmată funcțional. De aceea trecerea de concepte rulează după ce există reguli.
+  - **Forma `p{tipar}` pentru copiii fără concept.** A fragmentat grupurile, pentru că tiparele principale sunt prea specifice: reformulări 11%, QA 33%, 0 clase.
+  - **Cheia abstractă cerea măcar un copil `u`.** Unitățile formate numai din copii cu concept nu intrau în grupuri abstracte. Corectat: contează și `k`.
+- **Consecințe.**
+  - Implicit `concepts: false`: rezultatele vechi rămân octet cu octet (verificat pe FORMAL, semințele 2–3, și pe cele 73 de teste). Cu `true`, se adaugă o trecere (cost mic: o rețea pe zeci de tipare).
+  - Clasele-ipoteză nefolosite nu costă: dimensiunea numără doar atomii vii.
+- **Revizuire.**
+  - „is holding” nu intră încă în clasa HAVE.
+  - Locurile pentru propoziții-distractor acceptă doar propozițiile văzute (o alegere de unități), nu „orice fapt”. Asta explică majoritatea greșelilor HAVE rămase.
+  - Ciclul de inducție (ipoteză → test prin reguli → rafinare sau despărțire) nu e încă explicit.
+  - De decis dacă devine implicit, după blocul A cu `concepts: true`.

@@ -2,12 +2,35 @@
 // Firele de execuție nu sunt implementate încă (pasul 8).
 import { sleepPass } from './pass.mjs';
 import { alternativePass } from './alternatives.mjs';
+import { conceptPass } from './concepts.mjs';
 import { stats } from '../memory/size.mjs';
 import { LEVELS } from '../memory/store.mjs';
 
 export function deepSleep(mem, cfg, opts = {}) {
   const passes = [];
   const max = cfg.maxDeepPasses ?? 20;
+  let conceptsDone = false;
+  let conceptRounds = 0;
+  // curriculumul pe niveluri (D17): întâi propozițiile (nivelurile ≤ 3), apoi conceptele din ele, apoi restul
+  if (cfg.concepts && cfg.conceptsFirst) {
+    for (let i = 0; i < max; i++) {
+      const r = sleepPass(mem, cfg, { ...opts, maxLevel: 3 });
+      const rec = { pass: i + 1, kind: 'deep≤3', ...stats(mem, cfg.measure), before: r.before };
+      passes.push(rec);
+      opts.log?.(rec);
+      if (r.after < r.before - 1e-9) continue;
+      // formele generale (mai multe locuri) apar prin alternative, înaintea conceptelor
+      if (!cfg.alternatives) break;
+      const a = alternativePass(mem, cfg, { maxLevel: 3 });
+      passes.push({ pass: i + 1, kind: 'alternative≤3', ...stats(mem, cfg.measure), changed: a.changed, gain: a.gain ?? 0 });
+      if (!a.changed) break;
+    }
+    conceptsDone = true;
+    const c = conceptPass(mem, cfg);
+    const crec = { pass: 0, kind: 'concepts', ...stats(mem, cfg.measure), ...c };
+    passes.push(crec);
+    opts.log?.(crec);
+  }
   for (let i = 0; i < max; i++) {
     // V3 (D16): validarea rulează în toate trecerile ('all'), doar în prima trecere a somnului adânc ('first')
     // sau deloc ('none')
@@ -26,7 +49,18 @@ export function deepSleep(mem, cfg, opts = {}) {
     const arec = { pass: i + 1, kind: 'alternative', ...stats(mem, cfg.measure), before: a.before, changed: a.changed, group: a.key ?? null, gain: a.gain ?? 0, tried: a.tried };
     passes.push(arec);
     opts.log?.(arec);
-    if (!a.changed) break;
+    if (a.changed) continue;
+    // nici alternativele nu mai schimbă nimic: trecerea de concepte (D17), de cel mult cfg.conceptRounds ori;
+    // dacă a creat ceva, somnul continuă, ca regulile să poată folosi conceptele noi
+    if (cfg.concepts && conceptRounds < (cfg.conceptRounds ?? 2)) {
+      conceptRounds++;
+      const c = conceptPass(mem, cfg);
+      const crec = { pass: i + 1, kind: 'concepts', ...stats(mem, cfg.measure), ...c };
+      passes.push(crec);
+      opts.log?.(crec);
+      if (c.changed) continue;
+    }
+    break;
   }
   return passes;
 }

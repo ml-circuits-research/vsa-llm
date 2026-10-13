@@ -1,3 +1,4 @@
+import { conceptIndex } from '../memory/meaning.mjs';
 import { strategyFor, VectorView } from '../memory/vectors.mjs';
 import { findLift } from './propose.mjs';
 // Pasul 2: gruparea unităților care au aceiași copii, în afară de câteva poziții libere F.
@@ -51,6 +52,7 @@ function slotsAfter(ctx, units, F) {
 // toate grupurile valide, în ordinea de luare (fără atribuirea lacomă a unităților)
 export function candidateGroups(ctx, units, level) {
   const { mem, cfg } = ctx;
+  const conceptOf = cfg.concepts ? conceptIndex(mem) : null;
   const buckets = new Map();
   const subsetCache = new Map();
   for (const u of units) {
@@ -68,8 +70,18 @@ export function candidateGroups(ctx, units, level) {
     // gruparea abstractă: copii care sunt aplicări ale acelorași tipare (valorile pot diferi peste tot)
     if (cfg.abstractGroups) {
       // forma copiilor: o unitate contează prin nivelul și lungimea ei, un token prin el însuși
-      const sig = ch.map((c) => (mem.isUnit(c) ? (cfg.abstractShape === 'level' ? `u${mem.level(c)}` : `u${mem.level(c)}:${mem.children(c).length}`) : `a${c}`));
-      if (sig.some((x) => x[0] === 'u')) {
+      // forma copiilor; cu concepte (D17): forma conceptuală, adică clasa cea mai specifică a copilului
+      // (concept sau clasă vie) dacă tiparul lui principal e într-una, altfel nivelul
+      const shape = (c) => {
+        if (!mem.isUnit(c)) return `a${c}`;
+        if (cfg.concepts) {
+          const x = ctx.interp(c);
+          if (x && conceptOf.has(x.pattern)) return `k${conceptOf.get(x.pattern)}`;
+        }
+        return cfg.abstractShape === 'level' ? `u${mem.level(c)}` : `u${mem.level(c)}:${mem.children(c).length}`;
+      };
+      const sig = ch.map(shape);
+      if (sig.some((x) => x[0] === 'u' || x[0] === 'k')) {
         // structura repetițiilor: care valori (ale locurilor copiilor, sau copiii-token) se repetă, și unde.
         // Unități cu aceeași formă dar cu alte legături nu intră în același grup.
         const vals = ch.flatMap((c) => ctx.interp(c)?.fills ?? [c]);

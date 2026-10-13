@@ -14,7 +14,8 @@ export function sleepPass(mem, cfg, opts = {}) {
   const before = total(mem, measure);
   mem.beginPass();
   const ctx = new PassContext(mem, cfg);
-  for (let level = 1; level <= LEVELS; level++) {
+  // opts.maxLevel: somnul doar pe nivelurile de jos (curriculumul pe niveluri, D17)
+  for (let level = 1; level <= (opts.maxLevel ?? LEVELS); level++) {
     const units = [...new Set([...mem.buffer[level], ...mem.residue[level]])].filter((u) => mem.atoms[u].def.type === 'SEQ').sort((a, b) => a - b);
     ctx.seen[level] = units;
     if (!units.length) continue;

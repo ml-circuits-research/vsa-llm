@@ -31,5 +31,7 @@
   "multiInterp": true,
   "abstractGroups": true,
   "patternClasses": true,
-  "abstractShape": "level"
+  "abstractShape": "level",
+  "concepts": false,
+  "conceptsFirst": false
 }

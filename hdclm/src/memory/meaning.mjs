@@ -36,10 +36,15 @@ export function bearingSlots(mem) {
   return bearing;
 }
 
-// clasa vie din care face parte un tipar (prima, după id), sau null
+// clasa cea mai specifică din care face parte un tipar: întâi clasele vii, apoi conceptele de sens (din
+// trecerea de concepte); între ele, cea cu cei mai puțini membri
 export function classIndex(mem) {
   const idx = new Map();
-  for (const c of mem.allOfType('PCLASS')) if (mem.isLive(c)) for (const m of mem.atoms[c].def.members) if (!idx.has(m)) idx.set(m, c);
+  const cls = mem
+    .allOfType('PCLASS')
+    .filter((c) => mem.isLive(c) || mem.atoms[c].concept?.kind === 'sens')
+    .sort((a, b) => mem.atoms[a].def.members.length - mem.atoms[b].def.members.length || a - b);
+  for (const c of cls) for (const m of mem.atoms[c].def.members) if (!idx.has(m)) idx.set(m, c);
   return idx;
 }
 
@@ -71,4 +76,13 @@ export function meaningSummary(mem) {
     bear += slots.filter((s) => bearing.get(p)?.has(s)).length;
   }
   return { slots: total, bearing: bear, inert: total - bear };
+}
+
+// clasa cea mai specifică din care face parte un tipar, între toate clasele (vii sau concepte, inclusiv
+// ipoteze): forma conceptuală folosită la gruparea abstractă
+export function conceptIndex(mem) {
+  const idx = new Map();
+  const cls = mem.allOfType('PCLASS').sort((a, b) => mem.atoms[a].def.members.length - mem.atoms[b].def.members.length || a - b);
+  for (const c of cls) for (const m of mem.atoms[c].def.members) if (!idx.has(m)) idx.set(m, c);
+  return idx;
 }

@@ -28,13 +28,13 @@ function reproduces(mem, g) {
   return free.length === g.F.length && free.every((x, i) => x === g.F[i]);
 }
 
-export function alternativePass(mem, cfg) {
+export function alternativePass(mem, cfg, { maxLevel = LEVELS } = {}) {
   const measure = cfg.measure ?? 'terms';
   const before = total(mem, measure);
   mem.beginPass();
   let best = null;
   const tried = [];
-  for (let level = 1; level <= LEVELS; level++) {
+  for (let level = 1; level <= maxLevel; level++) {
     const bl = mem.byLevel(level);
     const units = [...bl.SEQ, ...bl.APP].filter((u) => !nested(mem, u)).sort((a, b) => a - b);
     if (units.length < 2) continue;

@@ -151,7 +151,10 @@ function classLift(ctx, ints, lvl, probe = false, rowOthers = null) {
   if (probe) return { q: null, cls: true, k, fills: ints.map((x) => x.fills), form: ints.map((x) => x.pattern) };
   const identity = [...Array(k).keys()];
   // o clasă existentă (din memorie sau din pachet) care are în comun cel puțin θ_merge din membri se refolosește
-  const all = [...ctx.mem.allOfType('PCLASS').filter((c) => ctx.mem.atoms[c].level === lvl), ...[...ctx.classes.keys()].filter((c) => ctx.classes.get(c).level === lvl)];
+  // cea mai specifică întâi (mai puțini membri): un subconcept înaintea conceptului mai general
+  const all = [...ctx.mem.allOfType('PCLASS').filter((c) => ctx.mem.atoms[c].level === lvl), ...[...ctx.classes.keys()].filter((c) => ctx.classes.get(c).level === lvl)].sort(
+    (a, b) => ctx.pattern(a).members.length - ctx.pattern(b).members.length || a - b,
+  );
   let M = null;
   for (const c of all) {
     const d = ctx.pattern(c);
