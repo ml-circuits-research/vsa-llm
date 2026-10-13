@@ -26,7 +26,7 @@ export class VectorView {
     return {
       isToken: (id) => mem.isToken(id),
       children: (id) => mem.children(id),
-      choicesOf: (id) => mem.atoms[id]?.choices ?? [],
+      choicesOf: (id) => (mem.atoms[id] ? mem.choicesOf(id) : []),
       def: (id) => mem.atoms[id]?.def,
       accepts: (s) => mem.atoms[s].accepts,
       members: (c) => mem.atoms[c].def.members,

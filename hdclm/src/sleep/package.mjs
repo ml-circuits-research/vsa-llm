@@ -50,7 +50,7 @@ export class Judge {
   view(A) {
     const ctx = this.ctx, mem = this.mem;
     const memo = new Map();
-    return {
+    const v = {
       def: (id) => {
         const r = ctx.rewriteOf.get(id);
         if (r !== undefined && A.has(r)) return { type: 'APP', pattern: r, fills: this.byPid.get(r).units.get(id) };
@@ -63,8 +63,14 @@ export class Judge {
         if (!memo.has(c)) memo.set(c, this.members(c, A));
         return memo.get(c);
       },
+      // alegere tipizată (D18): valorile acoperite de tipuri, plus membrii direcți adăugați
+      card: (c) => {
+        if (!(c > 0 && mem.atoms[c].def.typed)) return v.members(c).size;
+        return mem.choiceCard(c) + v.members(c).size - mem.atoms[c].def.members.size;
+      },
       pattern: (p) => ctx.pattern(p),
     };
+    return v;
   }
 
   region(R) {

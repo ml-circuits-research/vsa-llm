@@ -221,6 +221,8 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
   - **Concepte înaintea poveștilor (`conceptsFirst`, curriculum).** Ipotezele doar după tipuri au unit MOVE cu LEAVE (capcane contopite 100%). Concluzie: o ipoteză de tip trebuie confirmată funcțional. De aceea trecerea de concepte rulează după ce există reguli.
   - **Forma `p{tipar}` pentru copiii fără concept.** A fragmentat grupurile, pentru că tiparele principale sunt prea specifice: reformulări 11%, QA 33%, 0 clase.
   - **Cheia abstractă cerea măcar un copil `u`.** Unitățile formate numai din copii cu concept nu intrau în grupuri abstracte. Corectat: contează și `k`.
+- **Corectură (după commit-ul inițial al lui D17).** Pe GPARA, somnul adânc atinge limita de 20 de treceri (`maxDeepPasses`) înainte ca alternativele să se oprească. **Trecerea de concepte nu a rulat deloc în măsurătorile din tabel.** Câștigul vine numai din punctul 4: forma conceptuală din cheia grupării. Clasele folosite acolo sunt cele apărute prin ridicare (D15, MOVE și HAVE), nu cele din rețeaua de concepte. Mecanismul care a contat: „copiii cu același concept intră în același grup”, cu conceptul dat de clasele descoperite funcțional. Rețeaua de concepte rămâne neverificată în somn (vezi D18).
+- **Blocul A cu `concepts: true`** (semințele 1–3): identic cu implicitul (A1–A6 trec, A7 1 / 2 / 5, G10 100%).
 - **Consecințe.**
   - Implicit `concepts: false`: rezultatele vechi rămân octet cu octet (verificat pe FORMAL, semințele 2–3, și pe cele 73 de teste). Cu `true`, se adaugă o trecere (cost mic: o rețea pe zeci de tipare).
   - Clasele-ipoteză nefolosite nu costă: dimensiunea numără doar atomii vii.

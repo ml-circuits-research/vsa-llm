@@ -33,5 +33,6 @@
   "patternClasses": true,
   "abstractShape": "level",
   "concepts": false,
-  "conceptsFirst": false
+  "conceptsFirst": false,
+  "slotTypes": false
 }

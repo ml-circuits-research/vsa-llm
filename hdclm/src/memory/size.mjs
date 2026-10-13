@@ -8,6 +8,7 @@ export function memoryView(mem) {
     parents: (id) => mem.parents(id),
     isRoot: (id) => mem.roots.has(id),
     members: (c) => mem.atoms[c].def.members,
+    card: (c) => mem.choiceCard(c),
     pattern: (p) => mem.atoms[p].def,
   };
 }
@@ -59,7 +60,10 @@ export function defSize(view, id, measure = 'terms', bctx = null) {
       case 'APP': {
         const p = view.pattern(d.pattern);
         let s = lg(bctx.P);
-        for (const st of p.slots) s += lg(view.members(view.atom(st).accepts).size);
+        for (const st of p.slots) {
+          const c = view.atom(st).accepts;
+          s += lg(view.card ? view.card(c) : view.members(c).size);
+        }
         return s;
       }
     }

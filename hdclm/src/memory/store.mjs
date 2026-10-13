@@ -32,6 +32,8 @@ export class Memory {
     this._usage = null;
     this._choiceUsers = null;
     this._live = null;
+    this._classesOf = null;
+    this._typeUsers = null;
   }
 
   _write(what) {
@@ -132,6 +134,93 @@ export class Memory {
   // ---------- citire ----------
   members(choiceId) {
     return this.atoms[choiceId].def.members;
+  }
+  // Alegeri tipizate (D18): o alegere cu `typed` poate avea ca membri tipare sau clase de tipare, care
+  // înseamnă „orice aplicare a lor” (tipul locului este un concept, nu o listă de valori văzute).
+  // v aparține alegerii c: membru direct, sau (alegere tipizată) aplicare a unui tipar membru ori a unui
+  // tipar dintr-o clasă membră.
+  inChoice(c, v) {
+    const d = this.atoms[c].def;
+    if (d.members.has(v)) return true;
+    return !!d.typed && this.typeCovers(c, v);
+  }
+  typeCovers(c, v) {
+    const dv = this.atoms[v]?.def;
+    if (dv?.type !== 'APP') return false;
+    const ms = this.atoms[c].def.members;
+    if (ms.has(dv.pattern)) return true;
+    for (const M of this.classesOf(dv.pattern)) if (ms.has(M)) return true;
+    return false;
+  }
+  pinTyped(touched = new Set()) {
+    let any = false;
+    for (let id = 1; id < this.atoms.length && !any; id++) any = this.atoms[id].def?.type === 'CHOICE' && !!this.atoms[id].def.typed;
+    if (!any) return;
+    for (let id = 1; id < this.atoms.length; id++) {
+      const d = this.atoms[id].def;
+      if (d?.type !== 'APP') continue;
+      const p = this.atoms[d.pattern].def;
+      d.fills.forEach((v, i) => {
+        const c = this.atoms[p.slots[i]].accepts;
+        const cd = this.atoms[c].def;
+        if (cd.typed && !this.inChoice(c, v)) {
+          cd.members.set(v, 1);
+          touched.add(c);
+        }
+      });
+    }
+    this._clearCaches();
+  }
+  // clasele care conțin un tipar
+  classesOf(p) {
+    if (!this._classesOf) {
+      this._classesOf = new Map();
+      for (let id = 1; id < this.atoms.length; id++) {
+        const d = this.atoms[id].def;
+        if (d?.type !== 'PCLASS') continue;
+        for (const m of d.members) {
+          if (!this._classesOf.has(m)) this._classesOf.set(m, []);
+          this._classesOf.get(m).push(id);
+        }
+      }
+    }
+    return this._classesOf.get(p) ?? [];
+  }
+  // câte valori distincte poate lua un loc care acceptă c (pentru măsura în biți): membrii direcți, iar
+  // pentru un membru-tip, aplicările lui
+  choiceCard(c) {
+    const d = this.atoms[c].def;
+    if (!d.typed) return d.members.size;
+    let n = 0;
+    for (const m of d.members.keys()) {
+      const md = this.atoms[m].def;
+      if (md?.type === 'PATTERN') n += Math.max(1, this.usage(m));
+      else if (md?.type === 'PCLASS') n += Math.max(1, md.members.reduce((s, q) => s + this.usage(q), 0));
+      else n++;
+    }
+    return n;
+  }
+  // alegerile unui atom, pentru îmbogățire: cele în care e membru direct și cele tipizate care îl acoperă
+  choicesOf(id) {
+    const a = this.atoms[id];
+    const base = a?.choices ?? [];
+    if (a?.def?.type !== 'APP') return base;
+    if (!this._typeUsers) {
+      this._typeUsers = new Map();
+      for (let c = 1; c < this.atoms.length; c++) {
+        const d = this.atoms[c].def;
+        if (d?.type !== 'CHOICE' || !d.typed) continue;
+        for (const m of d.members.keys()) {
+          if (!this._typeUsers.has(m)) this._typeUsers.set(m, []);
+          this._typeUsers.get(m).push(c);
+        }
+      }
+    }
+    if (!this._typeUsers.size) return base;
+    const p = a.def.pattern;
+    const extra = [...(this._typeUsers.get(p) ?? []), ...this.classesOf(p).flatMap((M) => this._typeUsers.get(M) ?? [])];
+    if (!extra.length) return base;
+    return [...new Set([...base, ...extra])];
   }
 
   // copiii unei aplicări: tiparul cu locurile înlocuite de valori; un tipar cuibărit dă aplicarea lui.
@@ -249,6 +338,11 @@ export class Memory {
         const d = this.atoms[stack.pop()].def;
         if (d.type === 'PCLASS') d.members.forEach(mark);
         else for (const it of d.items) if (it.sub !== undefined) mark(it.sub);
+        // tipurile acceptate de locuri (D18): tiparele și clasele dintr-o alegere tipizată
+        for (const st of d.type === 'PCLASS' ? d.roles : d.slots) {
+          const cd = this.atoms[this.atoms[st].accepts]?.def;
+          if (cd?.typed) for (const m of cd.members.keys()) if (this.atoms[m].def?.type === 'PATTERN' || this.atoms[m].def?.type === 'PCLASS') mark(m);
+        }
       }
       this._live = live;
     }
@@ -339,6 +433,12 @@ export class Memory {
       for (const [m, w] of a.members) ms.set(R(m), (ms.get(R(m)) ?? 0) + w);
       touchedChoices.add(a.choice);
     }
+    // alegeri care devin tipizate (D18): membrii lor se înlocuiesc cu tipurile lor
+    for (const a of pkg.retype ?? []) {
+      const d = this.atoms[a.choice].def;
+      d.members = new Map(a.members.map(([m, w]) => [R(m), w]));
+      d.typed = true;
+    }
     for (const p of pkg.newPatterns ?? []) {
       for (const s of p.structs) this.atoms[R(s.tmp)].accepts = R(s.accepts);
       this.atoms[R(p.tmp)].def = {
@@ -376,6 +476,9 @@ export class Memory {
     for (const r of pkg.rewrites ?? []) this.atoms[r.unit].def = { type: 'APP', pattern: R(r.pattern), fills: r.fills.slice() };
     for (const u of pkg.reverts ?? []) this.atoms[u].def = { type: 'SEQ', items: before.get(u).children.slice() };
     this._clearCaches();
+    // alegerile tipizate (D18): o valoare care nu mai e acoperită de tip (unitatea ei a trecut la alt tipar)
+    // rămâne membru direct, ca nimic să nu se piardă; costul membrului se vede în măsurarea exactă
+    this.pinTyped(touchedChoices);
     // 3. tampon -> rest
     const rewritten = new Set((pkg.rewrites ?? []).map((r) => r.unit));
     for (let l = 0; l <= LEVELS; l++) {
@@ -408,7 +511,7 @@ export class Memory {
   atomToJSON(a) {
     if (a.kind === 'TOKEN') return { id: a.id, kind: a.kind, text: a.text, choices: a.choices };
     if (a.kind === 'STRUCT') return { id: a.id, kind: a.kind, pattern: a.pattern, accepts: a.accepts };
-    const d = a.def.type === 'CHOICE' ? { type: 'CHOICE', members: [...a.def.members] } : a.def;
+    const d = a.def.type === 'CHOICE' ? { type: 'CHOICE', members: [...a.def.members], ...(a.def.typed ? { typed: true } : {}) } : a.def;
     const o = { id: a.id, kind: a.kind, level: a.level, def: d, count: a.count, choices: a.choices };
     if (a.concept) o.concept = a.concept;
     if (a.isa) o.isa = a.isa;
@@ -424,7 +527,7 @@ export class Memory {
       if (!a) return a;
       const c = { ...a, choices: a.choices ? a.choices.slice() : a.choices };
       if (a.def) {
-        if (a.def.type === 'CHOICE') c.def = { type: 'CHOICE', members: new Map(a.def.members) };
+        if (a.def.type === 'CHOICE') c.def = { type: 'CHOICE', members: new Map(a.def.members), ...(a.def.typed ? { typed: true } : {}) };
         else c.def = structuredClone(a.def);
       }
       return c;

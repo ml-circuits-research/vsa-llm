@@ -34,11 +34,13 @@ export function checkInvariants(mem, { before = null } = {}) {
         if (d.fills.length !== p.def.slots.length) fail('I6', `aplicarea ${id}: ${d.fills.length} valori pentru ${p.def.slots.length} locuri`);
         d.fills.forEach((v, i) => {
           const s = mem.atoms[p.def.slots[i]];
-          if (!mem.members(s.accepts).has(v)) fail('I6', `aplicarea ${id}: valoarea ${v} nu este membru al alegerii ${s.accepts}`);
+          if (!mem.inChoice(s.accepts, v)) fail('I6', `aplicarea ${id}: valoarea ${v} nu este membru al alegerii ${s.accepts}`);
         });
       }
     } else if (d.type === 'CHOICE') {
-      if (d.members.size < 2) fail('I4', `alegerea ${id} are ${d.members.size} membri`);
+      if (d.members.size < 2 && !(d.typed && mem.choiceCard(id) >= 2)) fail('I4', `alegerea ${id} are ${d.members.size} membri`);
+      // D18: membrii-tip ai unei alegeri tipizate sunt tipare sau clase de tipare
+      if (d.typed) for (const m of d.members.keys()) if (mem.atoms[m].kind !== 'SENSE' && mem.atoms[m].kind !== 'TOKEN') fail('I6', `alegerea tipizată ${id} are membrul ${m} nevalid`);
     } else if (d.type === 'PATTERN') {
       if (d.items.length < 1 || d.items.length > K) fail('I4', `tiparul ${id} are ${d.items.length} copii`);
       const anchored = d.items.some((it) => it.fixed !== undefined || it.sub !== undefined);

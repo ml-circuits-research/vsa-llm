@@ -58,7 +58,7 @@ export function describe(mem) {
     const items = d.items.map((it) => (it.fixed !== undefined ? show(it.fixed) : it.slot !== undefined ? `S${it.slot}` : it.form !== undefined ? `M${it.sub}(${it.args.map((s) => `S${s}`).join(',')}; formă S${it.form})` : `N${it.sub}(${it.args.map((s) => `S${s}`).join(',')})`));
     return { id: p, level: mem.atoms[p].level, text: `[${items.join(', ')}]`, slots: d.slots.map((s) => ({ slot: s, accepts: mem.atoms[s].accepts })), usage: mem.usage(p) };
   });
-  const choices = mem.allOfType('CHOICE').filter((c) => mem.isLive(c)).map((c) => ({ id: c, level: mem.atoms[c].level, members: [...mem.atoms[c].def.members.keys()].map((m) => (mem.isToken(m) ? mem.atoms[m].text : mem.atoms[m].def.type === 'PATTERN' ? `P${m}` : `N${m}:"${mem.text(m)}"`)) }));
+  const choices = mem.allOfType('CHOICE').filter((c) => mem.isLive(c)).map((c) => ({ id: c, level: mem.atoms[c].level, members: [...mem.atoms[c].def.members.keys()].map((m) => (mem.isToken(m) ? mem.atoms[m].text : mem.atoms[m].def.type === 'PATTERN' ? `P${m}` : mem.atoms[m].def.type === 'PCLASS' ? `M${m}` : `N${m}:"${mem.text(m)}"`)), typed: !!mem.atoms[c].def.typed }));
   return { patterns, choices };
 }
 

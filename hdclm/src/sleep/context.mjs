@@ -3,6 +3,8 @@
 import { ExactSim } from '../memory/similarity.mjs';
 import { makeSim, VectorView } from '../memory/vectors.mjs';
 
+const isType = (mem, m) => mem.atoms[m].def?.type === 'PATTERN' || mem.atoms[m].def?.type === 'PCLASS';
+
 export class PassContext {
   constructor(mem, cfg) {
     this.mem = mem;
@@ -46,7 +48,7 @@ export class PassContext {
   // membrii unei alegeri pentru recunoaștere: cei din memorie (înghețată)
   isMember(c, v) {
     if (c < 0) return this.choices.get(c).current.has(v);
-    if (this.mem.atoms[c].def.members.has(v)) return true;
+    if (this.mem.inChoice(c, v)) return true;
     return this.cfg.freeze === false && !!this.extraMembers.get(c)?.has(v);
   }
   memberList(c) {
@@ -59,8 +61,11 @@ export class PassContext {
     const ms = this.memberList(c);
     if (!ms.length) return 0;
     let s = 0;
-    for (const m of ms) s += this.sim.simC(m, v); // alegerile se judecă pe comp / simC (greșeala 3)
-    return s / ms.length;
+    // membrii-tip (D18) nu sunt valori: nu intră în medie
+    const vs = c > 0 && this.mem.atoms[c].def.typed ? ms.filter((m) => !isType(this.mem, m)) : ms;
+    if (!vs.length) return 0;
+    for (const m of vs) s += this.sim.simC(m, v); // alegerile se judecă pe comp / simC (greșeala 3)
+    return s / vs.length;
   }
   // valoarea v ca aplicare: rescrierea propusă în această trecere sau definiția din memorie
   interp(v) {
@@ -131,6 +136,8 @@ export function slotValues(ctx, pid, fills) {
   const pat = ctx.pattern(pid);
   const bind = new Map(pat.slots.map((s, i) => [s, fills[i]]));
   const out = pat.slots.map((s, i) => [ctx.accepts(s), fills[i]]);
+  // o valoare acoperită de tipul unei alegeri tipizate (D18) nu cere un membru nou
+  const covered = ([c, v]) => c > 0 && ctx.mem.atoms[c].def.typed && ctx.mem.typeCovers(c, v);
   for (const it of pat.items)
     if (it.sub !== undefined) {
       const q = ctx.pattern(it.sub);
@@ -142,5 +149,5 @@ export function slotValues(ctx, pid, fills) {
         md.slots.forEach((s, k) => out.push([ctx.accepts(s), bind.get(it.args[q.align[member][k]])]));
       } else it.args.forEach((a, j) => out.push([ctx.accepts(q.slots[j]), bind.get(a)]));
     }
-  return out;
+  return out.filter((x) => !covered(x));
 }

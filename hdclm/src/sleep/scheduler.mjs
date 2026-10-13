@@ -3,6 +3,7 @@
 import { sleepPass } from './pass.mjs';
 import { alternativePass } from './alternatives.mjs';
 import { conceptPass } from './concepts.mjs';
+import { typePass } from './types.mjs';
 import { stats } from '../memory/size.mjs';
 import { LEVELS } from '../memory/store.mjs';
 
@@ -11,6 +12,7 @@ export function deepSleep(mem, cfg, opts = {}) {
   const max = cfg.maxDeepPasses ?? 20;
   let conceptsDone = false;
   let conceptRounds = 0;
+  let typeRounds = 0;
   // curriculumul pe niveluri (D17): întâi propozițiile (nivelurile ≤ 3), apoi conceptele din ele, apoi restul
   if (cfg.concepts && cfg.conceptsFirst) {
     for (let i = 0; i < max; i++) {
@@ -59,6 +61,15 @@ export function deepSleep(mem, cfg, opts = {}) {
       passes.push(crec);
       opts.log?.(crec);
       if (c.changed) continue;
+    }
+    // apoi tipurile locurilor (D18): alegeri de aplicări -> alegeri tipizate, de cel mult cfg.typeRounds ori
+    if (cfg.slotTypes && typeRounds < (cfg.typeRounds ?? 2)) {
+      typeRounds++;
+      const t = typePass(mem, cfg);
+      const trec = { pass: i + 1, kind: 'types', ...stats(mem, cfg.measure), changed: t.changed, retyped: t.retyped };
+      passes.push(trec);
+      opts.log?.(trec);
+      if (t.changed) continue;
     }
     break;
   }

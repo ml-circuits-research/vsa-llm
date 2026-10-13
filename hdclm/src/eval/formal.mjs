@@ -69,6 +69,7 @@ function goldScore(mem, chs, gold) {
   const textOf = (m) => {
     if (mem.isToken(m)) return mem.atoms[m].text;
     const d = mem.atoms[m].def;
+    if (d.type === 'PCLASS') return `M${m}`; // membru-tip al unei alegeri tipizate (D18)
     if (d.type !== 'PATTERN') return mem.text(m);
     let w = d.items.filter((it) => it.fixed !== undefined && mem.isToken(it.fixed)).map((it) => mem.atoms[it.fixed].text).filter((t) => !/^[^\p{L}]+$/u.test(t));
     while (w.length && ['the', 'to', 'a'].includes(w.at(-1))) w = w.slice(0, -1);

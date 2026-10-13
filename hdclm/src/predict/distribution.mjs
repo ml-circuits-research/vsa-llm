@@ -81,9 +81,9 @@ export class Predictor {
     this.cfg = cfg;
     this.temp = new TempStore(mem);
     const t = this.temp;
-    const tsrc = { isToken: (id) => t.isToken(id), children: (id) => t.children(id), choicesOf: (id) => (t.isTemp(id) ? [] : mem.atoms[id].choices ?? []) };
+    const tsrc = { isToken: (id) => t.isToken(id), children: (id) => t.children(id), choicesOf: (id) => (t.isTemp(id) ? [] : mem.choicesOf(id)) };
     this.sim = makeSim(cfg, () => new ExactSim(
-      { isToken: (id) => t.isToken(id), children: (id) => t.children(id), choicesOf: (id) => (t.isTemp(id) ? [] : mem.atoms[id].choices ?? []) },
+      { isToken: (id) => t.isToken(id), children: (id) => t.children(id), choicesOf: (id) => (t.isTemp(id) ? [] : mem.choicesOf(id)) },
       cfg.w,
     ), {
       ...tsrc,
@@ -106,10 +106,19 @@ export class Predictor {
     this.env = {
       pattern: (p) => mem.atoms[p].def,
       accepts: (s) => mem.atoms[s].accepts,
-      isMember: (c, v) => mem.atoms[c].def.members.has(v),
+      isMember: (c, v) => {
+        const d = mem.atoms[c].def;
+        if (d.members.has(v)) return true;
+        if (!d.typed) return false;
+        // alegere tipizată (D18): v (și o unitate nouă) se citește ca aplicare; tiparul sau o clasă a lui e membru
+        const x = this.interp(v);
+        return !!x && (d.members.has(x.pattern) || mem.classesOf(x.pattern).some((M) => d.members.has(M)));
+      },
       similar: (c, v) => {
         let s = 0, n = 0;
+        const typed = mem.atoms[c].def.typed;
         for (const m of mem.atoms[c].def.members.keys()) {
+          if (typed && this.isType(m)) continue;
           s += this.sim.simC(m, v);
           n++;
         }
@@ -120,6 +129,27 @@ export class Predictor {
       multiInterp: !!cfg.multiInterp,
       thetaAccept: cfg.theta_accept,
     };
+  }
+
+  isType(m) {
+    const t = this.mem.atoms[m].def?.type;
+    return t === 'PATTERN' || t === 'PCLASS';
+  }
+  // aplicările din memorie ale unui tipar sau ale membrilor unei clase
+  appsOfType(T) {
+    if (!this.appsIdx) {
+      this.appsIdx = new Map();
+      for (let id = 1; id < this.mem.atoms.length; id++) {
+        const d = this.mem.atoms[id].def;
+        if (d?.type !== 'APP') continue;
+        if (!this.appsIdx.has(d.pattern)) this.appsIdx.set(d.pattern, []);
+        this.appsIdx.get(d.pattern).push(id);
+      }
+    }
+    const d = this.mem.atoms[T].def;
+    const ps = d.type === 'PCLASS' ? d.members : [T];
+    const out = ps.flatMap((p) => this.appsIdx.get(p) ?? []);
+    return out;
   }
 
   // v ca aplicare: definiția din memorie, sau recunoașterea lui pe tiparele cunoscute
@@ -170,10 +200,15 @@ export class Predictor {
         else if (it.slot !== undefined) {
           if (m.bind.has(it.slot)) addTo(s1, m.bind.get(it.slot), w);
           else {
-            const ms = mem.atoms[mem.atoms[it.slot].accepts].def.members;
+            const cd = mem.atoms[mem.atoms[it.slot].accepts].def;
+            const ms = cd.members;
             let tot = 0;
             for (const x of ms.values()) tot += x;
-            for (const [x, wt] of ms) addTo(s3, x, (w * wt) / tot);
+            for (const [x, wt] of ms) {
+              // un membru-tip (D18) se împarte egal între aplicările lui din memorie
+              const xs = cd.typed && this.isType(x) ? this.appsOfType(x) : [x];
+              for (const y of xs) addTo(s3, y, (w * wt) / tot / xs.length);
+            }
           }
         } else if (it.args.every((s) => m.bind.has(s))) {
           const q = mem.atoms[it.sub];
@@ -334,7 +369,7 @@ export class Predictor {
     let f = this.fCache.get(x);
     if (f) return f;
     f = [String(x)];
-    if (!this.temp.isTemp(x)) for (const c of this.mem.atoms[x]?.choices ?? []) f.push(`c${c}`);
+    if (!this.temp.isTemp(x) && this.mem.atoms[x]) for (const c of this.mem.choicesOf(x)) f.push(`c${c}`);
     if (!this.temp.isToken(x)) {
       const ch = this.temp.children(x);
       if (ch) ch.forEach((c, k) => { for (const g of this.features(c)) f.push(`${k}.${g}`); });

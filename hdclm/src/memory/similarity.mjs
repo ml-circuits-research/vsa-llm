@@ -15,7 +15,7 @@ export class ExactSim {
       isToken: (id) => mem.isToken(id),
       children: (id) => mem.children(id),
       choicesOf: (id) => {
-        const base = mem.atoms[id]?.choices ?? [];
+        const base = mem.choicesOf(id);
         const extra = extraChoices?.get(id);
         return extra ? [...new Set([...base, ...extra])] : base;
       },
