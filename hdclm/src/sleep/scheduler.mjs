@@ -95,7 +95,7 @@ export function deepSleep(mem, cfg, opts = {}) {
     if (cfg.slotTypes && typeRounds < (cfg.typeRounds ?? 2)) {
       typeRounds++;
       const t = typePass(mem, cfg, { validate: opts.validate });
-      const trec = { pass: i + 1, kind: 'types', ...stats(mem, cfg.measure), changed: t.changed, retyped: t.retyped };
+      const trec = { pass: i + 1, kind: 'types', ...stats(mem, cfg.measure), changed: t.changed, retyped: t.retyped, tried: t.tried };
       passes.push(trec);
       opts.log?.(trec);
       if (t.changed) continue;
