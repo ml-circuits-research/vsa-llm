@@ -12,7 +12,7 @@ const sameSet = (a, b) => a.length === b.length && a.every((x) => b.includes(x))
 
 export function conceptPass(mem, cfg) {
   const level = 3;
-  const { pats, prof, vc } = patternProfilesByValues(mem, level, undefined);
+  const { pats, prof, vc } = patternProfilesByValues(mem, level, cfg.theta_merge ?? 0.5);
   let ref = -1;
   const pkg = { newChoices: [], addMembers: [], newPatterns: [], newClasses: [], classAdds: [], rewrites: [], seen: {}, meta: [] };
   // 1. concepte de valori -> alegeri (refolosite dacă există deja una cu exact aceiași membri)

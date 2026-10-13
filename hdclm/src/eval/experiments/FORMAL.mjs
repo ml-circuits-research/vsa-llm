@@ -9,10 +9,10 @@ import { formalQuality } from '../formal.mjs';
 import { canon, bearingSlots, meaningSummary, classIndex } from '../../memory/meaning.mjs';
 import { GPARA_GOLD } from '../../data/gpara.mjs';
 
-const FORMS = new Map(Object.entries(GPARA_GOLD.meanings).flatMap(([m, fs]) => fs.map((f) => [f, m])));
+const formsOf = (gold) => new Map(Object.entries(gold.meanings).flatMap(([m, fs]) => fs.map((f) => [f, m])));
 
 // „Nora went back to the attic .” -> { meaning, form, key: nume|țintă }
-function parseFact(words) {
+function parseFact(words, FORMS) {
   if (words.at(-1) !== '.' || words.length < 4) return null;
   const the = words.lastIndexOf('the');
   if (the < 2) return null;
@@ -23,13 +23,16 @@ function parseFact(words) {
   return meaning ? { meaning, form, key: `${words[0]}|${words[the + 1]}` } : null;
 }
 
-function paraphraseScore(mem) {
+// gold = { meanings, traps: [[sens, sens]] }: perechile de sensuri care nu au voie să aibă aceeași ecuație
+export function paraphraseScore(mem, gold = { meanings: GPARA_GOLD.meanings, traps: [['MOVE', 'LEAVE']] }) {
+  const FORMS = formsOf(gold);
+  const isTrap = (x, y) => gold.traps.some(([p, q]) => (x === p && y === q) || (x === q && y === p));
   const bearing = bearingSlots(mem);
   const classOf = classIndex(mem);
   const facts = [];
   for (const u of [...mem.allOfType('SEQ'), ...mem.allOfType('APP')]) {
     if (mem.level(u) !== 3) continue;
-    const f = parseFact(mem.unfold(u).map((t) => mem.atoms[t].text));
+    const f = parseFact(mem.unfold(u).map((t) => mem.atoms[t].text), FORMS);
     if (f) facts.push({ u, ...f, canon: canon(mem, u, bearing, classOf) });
   }
   let pairs = 0, same = 0, traps = 0, trapSame = 0;
@@ -41,7 +44,7 @@ function paraphraseScore(mem) {
       if (a.meaning === b.meaning) {
         pairs++;
         if (eq) same++;
-      } else if ((a.meaning === 'LEAVE') !== (b.meaning === 'LEAVE') && [a.meaning, b.meaning].includes('MOVE')) {
+      } else if (isTrap(a.meaning, b.meaning)) {
         traps++;
         if (eq) trapSame++;
       }

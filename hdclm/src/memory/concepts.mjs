@@ -11,8 +11,8 @@
 //   o intensiune inclusă în alta      -> ierarhie (concept mai general / subconcept)
 //   intensiuni care se suprapun      -> frați sub conceptul mai general
 
-// categoria unei mulțimi de valori: alegerea vie care o acoperă cel mai bine (≥ 50%)
-function categoryOf(mem, vals, choices) {
+// categoria unei mulțimi de valori: alegerea vie care o acoperă cel mai bine (≥ θ, implicit θ_merge)
+function categoryOf(mem, vals, choices, theta = 0.5) {
   let best = null, bo = 0;
   for (const c of choices) {
     const ms = mem.atoms[c].def.members;
@@ -21,10 +21,10 @@ function categoryOf(mem, vals, choices) {
     const o = k / vals.size;
     if (o > bo + 1e-9 || (Math.abs(o - bo) <= 1e-9 && best !== null && ms.size > mem.atoms[best].def.members.size)) [bo, best] = [o, c];
   }
-  return bo >= 0.5 ? `C${best}` : 'amestec';
+  return bo >= theta ? `C${best}` : 'amestec';
 }
 
-export function patternProfiles(mem, level = 3) {
+export function patternProfiles(mem, level = 3, theta = 0.5) {
   const live = (t) => mem.allOfType(t).filter((x) => mem.isLive(x));
   const choices = live('CHOICE');
   const pats = live('PATTERN').filter((p) => mem.atoms[p].level === level);
@@ -34,7 +34,7 @@ export function patternProfiles(mem, level = 3) {
     if (usage.has(d.pattern)) d.fills.forEach((v, j) => usage.get(d.pattern)[j].add(v));
   }
   const prof = new Map(pats.map((p) => [p, new Set()]));
-  for (const p of pats) usage.get(p).forEach((vals, j) => vals.size && prof.get(p).add(`T${j}:${categoryOf(mem, vals, choices)}`));
+  for (const p of pats) usage.get(p).forEach((vals, j) => vals.size && prof.get(p).add(`T${j}:${categoryOf(mem, vals, choices, theta)}`));
   // funcție: regulile care cuibăresc tiparul (direct sau printr-o clasă) și locurile legate
   for (const R of live('PATTERN')) {
     const items = mem.atoms[R].def.items;
@@ -133,8 +133,8 @@ export function valueConcepts(mem, level = 3, theta = 0.5) {
 }
 
 // profilurile tiparelor, cu tipurile locurilor date de conceptele de valori (nu de alegerile acceptate)
-export function patternProfilesByValues(mem, level = 3, vc = valueConcepts(mem, level)) {
-  const { pats, prof } = patternProfiles(mem, level);
+export function patternProfilesByValues(mem, level = 3, theta = 0.5, vc = valueConcepts(mem, level, theta)) {
+  const { pats, prof } = patternProfiles(mem, level, theta);
   for (const p of pats) {
     for (const a of [...prof.get(p)]) if (a.startsWith('T')) prof.get(p).delete(a);
     const counts = mem.atoms[p].def.slots.map(() => new Map());
@@ -149,7 +149,7 @@ export function patternProfilesByValues(mem, level = 3, vc = valueConcepts(mem, 
     counts.forEach((m, j) => {
       const tot = [...m.values()].reduce((a, b) => a + b, 0);
       const [g, c] = [...m].sort((a, b) => b[1] - a[1])[0] ?? [];
-      if (tot) prof.get(p).add(c / tot >= 0.5 ? `T${j}:V${g}` : `T${j}:amestec`);
+      if (tot) prof.get(p).add(c / tot >= theta ? `T${j}:V${g}` : `T${j}:amestec`);
     });
   }
   return { pats, prof, vc };
