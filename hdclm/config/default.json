@@ -34,5 +34,6 @@
   "abstractShape": "level",
   "concepts": false,
   "conceptsFirst": false,
-  "slotTypes": false
+  "slotTypes": false,
+  "induction": false
 }

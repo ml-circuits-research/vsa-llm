@@ -4,6 +4,7 @@ import { sleepPass } from './pass.mjs';
 import { alternativePass } from './alternatives.mjs';
 import { conceptPass } from './concepts.mjs';
 import { typePass } from './types.mjs';
+import { inductionPass } from './induction.mjs';
 import { stats } from '../memory/size.mjs';
 import { LEVELS } from '../memory/store.mjs';
 
@@ -13,6 +14,7 @@ export function deepSleep(mem, cfg, opts = {}) {
   let conceptsDone = false;
   let conceptRounds = 0;
   let typeRounds = 0;
+  let inductionDone = 0;
   // curriculumul pe niveluri (D17): întâi propozițiile (nivelurile ≤ 3), apoi conceptele din ele, apoi restul
   if (cfg.concepts && cfg.conceptsFirst) {
     for (let i = 0; i < max; i++) {
@@ -61,6 +63,15 @@ export function deepSleep(mem, cfg, opts = {}) {
       passes.push(crec);
       opts.log?.(crec);
       if (c.changed) continue;
+    }
+    // inducția (D19): ipotezele care cuprind o clasă confirmată se testează prin consecințe, de cel mult două ori
+    if (cfg.concepts && cfg.induction && inductionDone < 2) {
+      inductionDone++;
+      const t = inductionPass(mem, cfg);
+      const irec = { pass: i + 1, kind: 'induction', ...stats(mem, cfg.measure), changed: t.changed, accepted: t.accepted, tried: t.tried };
+      passes.push(irec);
+      opts.log?.(irec);
+      if (t.changed) continue;
     }
     // apoi tipurile locurilor (D18): alegeri de aplicări -> alegeri tipizate, de cel mult cfg.typeRounds ori
     if (cfg.slotTypes && typeRounds < (cfg.typeRounds ?? 2)) {
