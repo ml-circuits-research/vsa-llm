@@ -494,10 +494,15 @@ export class Predictor {
   }
   // probabilitățile fiecărui token al unui document (și ale sfârșitului de text), cu tăierea incrementală:
   // aceleași stive ca segmentPrefix pe fiecare prefix, fără a reface tăierea de la început
-  docProbs(tokens) {
+  // from: probabilitățile se calculează doar de la tokenul `from` (cele de dinainte doar se citesc)
+  docProbs(tokens, { from = 0 } = {}) {
     const seg = new Segmenter();
     const out = [];
     for (let i = 0; i <= tokens.length; i++) {
+      if (i < from) {
+        seg.push({ ...tokens[i], ref: this.temp.token(tokens[i].text) });
+        continue;
+      }
       const snap = seg.clone();
       if (snap.pending) snap.resolvePending(true);
       const st = this.stackFromOpen(snap.openStack());
