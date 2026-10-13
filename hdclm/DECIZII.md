@@ -282,3 +282,23 @@ Fiecare decizie are: contextul, ce s-a ales, alternativele, dovezile, consecinț
 - **Ales.** Pe lângă fiecare grup abstract se propun subgrupuri, câte unul pentru fiecare tipar (sau clasă vie) al unei coloane, cu cel puțin m_min unități. Alege câștigul exact.
 - **Dovezi.** Pe GBLIND apar 4 reguli generale. QA pe testul obișnuit 44%, pe poveștile puse deoparte 17%.
 - **Notă.** Toate dovezile D21–D23 sunt pe GBLIND, de acum set văzut. Testul de generalitate este GBLIND2 (preînregistrat în REZULTATE.md).
+
+## D24. Refolosirea claselor după suprapunerea pe reuniune (`classJaccard`, opțional)
+
+- **Context.** Pe GBLIND2 (sămânța 2), clasa PLACE a înghițit capcanele „is leaving” și „dreams of”. Urma din `classLift` (`HDCLM_TRACE=1`) arată cum:
+  - o coloană cu doar 2 rânduri dă clasa {dreams of, rests in};
+  - criteriul de refolosire măsura formele comune față de mulțimea mai mică, deci o singură formă comună ajungea;
+  - clasele s-au înlănțuit ({a,b} + {b,c} + …), ca la gruparea cu legătură simplă.
+- **Ales.** Suprapunerea se măsoară pe reuniune (Jaccard ≥ θ_merge), ca la conceptele de valori. Nu e un prag nou.
+- **Dovezi** (cu toate opțiunile D17–D23 pornite, ambele seturi fiind de acum văzute):
+
+  | Set | Reformulări cu aceeași ecuație | Capcane contopite | QA pe poveștile puse deoparte |
+  |---|---|---|---|
+  | GBLIND (semințele 1/2/3) | 57 / 100 / 100% | 0 / 0 / 0% | 29 / 39 / 64% (implicit: 14 / 7 / 14%) |
+  | GBLIND2 (semințele 1/2/3) | 100 / 65 / 58% | 0 / **0 / 7%** (înainte: 0 / 50 / 38%) | 31 / 13 / 21% (neschimbat) |
+
+- **Ce rămâne.** Pe GBLIND2 (sămânța 2), QA după numărul de fapte:
+  - 2 fapte: aproape tot corect pe antrenare și pe testul obișnuit;
+  - 4 fapte: 0 din 14, chiar și pe antrenare, pentru că nicio regulă nu are lungimea asta.
+
+  Regulile au lungime fixă, deci e nevoie de golul din PROPUNERI_LACUNE.md (lacuna 3). Acesta e pasul următor.
