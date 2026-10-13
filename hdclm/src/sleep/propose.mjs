@@ -160,7 +160,10 @@ function classLift(ctx, ints, lvl, probe = false, rowOthers = null) {
     const d = ctx.pattern(c);
     if (d.roles.length !== k) continue;
     const common = pats.filter((p) => d.align[p]).length;
-    if (common / Math.min(pats.length, d.members.length) >= ctx.cfg.theta_merge && compatibleSlots(ctx, [d.members[0], ...pats])) {
+    // D24: suprapunerea se măsoară pe reuniune (Jaccard), nu pe mulțimea mai mică: altfel clasele se înlănțuie
+    // ({a,b} + {b,c} + {c,d} …) prin câte o formă comună, cum se unesc conceptele prin punți
+    const overlap = ctx.cfg.classJaccard ? common / (pats.length + d.members.length - common) : common / Math.min(pats.length, d.members.length);
+    if (overlap >= ctx.cfg.theta_merge && compatibleSlots(ctx, [d.members[0], ...pats])) {
       M = c;
       break;
     }
@@ -187,6 +190,7 @@ function classLift(ctx, ints, lvl, probe = false, rowOthers = null) {
       }
   }
   const d = ctx.pattern(M);
+  if (process.env.HDCLM_TRACE) console.error('classLift', JSON.stringify({ lvl, pats, M, members: d.members, rows: ints.length, reused: !String(M).startsWith('-') || undefined }));
   const fills = ints.map((x) => {
     const roles = new Array(d.roles.length);
     d.align[x.pattern].forEach((r, j) => (roles[r] = x.fills[j]));

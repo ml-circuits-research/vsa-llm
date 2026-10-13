@@ -1,6 +1,6 @@
 import { trainSimple } from '../../src/eval/run.mjs';
 import { describe } from '../../src/eval/metrics.mjs';
-const r = trainSimple({ set: 'GBLIND', seed: 3, overrides: JSON.parse(process.env.OV ?? '{}') });
+const r = trainSimple({ set: process.env.SET ?? 'GBLIND', seed: +(process.argv[2] ?? 3), overrides: JSON.parse(process.env.OV ?? '{}') });
 const m = r.mem, D = describe(m);
 const pt = (id) => D.patterns.find((p) => p.id === id)?.text ?? id;
 for (const c of m.allOfType('PCLASS')) {

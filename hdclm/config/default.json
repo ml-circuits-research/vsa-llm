@@ -38,5 +38,6 @@
   "induction": false,
   "levelCurriculum": false,
   "altSeqGroups": false,
-  "splitAbstract": false
+  "splitAbstract": false,
+  "classJaccard": false
 }
