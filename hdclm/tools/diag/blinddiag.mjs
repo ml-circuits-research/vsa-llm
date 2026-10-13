@@ -7,3 +7,8 @@ for (const [k, docs] of Object.entries(sets)) { const q = answerAccuracy(r.mem, 
 const D = describe(r.mem);
 for (const p of D.patterns.filter((p) => p.level >= 4)) console.log(p.id, 'L' + p.level, 'u' + p.usage, p.text);
 for (const p of D.patterns.filter((p) => p.level === 3)) console.log(p.id, 'L3 u' + p.usage, p.text);
+if (process.env.FAILS) {
+  const q = answerAccuracy(r.mem, r.cfg, sets.held);
+  for (const x of q.rows.filter((x) => !x.ok && x.meta.nFacts === 2)) console.log('GREȘIT', x.meta.prompt, '→', x.top, '| corect', x.answer, x.p.toFixed(2));
+  for (const c of r.mem.allOfType('PCLASS').filter((c) => r.mem.isLive(c))) console.log('clasa', c, r.mem.atoms[c].def.members.map((m) => D.patterns.find((p) => p.id === m)?.text).join(' | '));
+}
