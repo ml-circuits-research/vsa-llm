@@ -35,5 +35,6 @@
   "concepts": false,
   "conceptsFirst": false,
   "slotTypes": false,
-  "induction": false
+  "induction": false,
+  "levelCurriculum": false
 }

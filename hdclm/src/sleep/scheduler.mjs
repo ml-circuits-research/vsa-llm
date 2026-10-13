@@ -15,6 +15,24 @@ export function deepSleep(mem, cfg, opts = {}) {
   let conceptRounds = 0;
   let typeRounds = 0;
   let inductionDone = 0;
+  // curriculumul pe niveluri (D21): fiecare nivel doarme până se stabilizează (treceri + alternative) înainte să
+  // se construiască reguli peste el. Regulile de sus se sprijină astfel pe formele generale de jos, nu pe forme
+  // „pe loc” apărute devreme și blocate apoi prin cuibărire.
+  if (cfg.levelCurriculum) {
+    for (let L = 1; L < LEVELS; L++) {
+      for (let i = 0; i < max; i++) {
+        const r = sleepPass(mem, cfg, { ...opts, maxLevel: L });
+        const rec = { pass: i + 1, kind: `deep≤${L}`, ...stats(mem, cfg.measure), before: r.before };
+        passes.push(rec);
+        opts.log?.(rec);
+        if (r.after < r.before - 1e-9) continue;
+        if (!cfg.alternatives) break;
+        const a = alternativePass(mem, cfg, { maxLevel: L });
+        passes.push({ pass: i + 1, kind: `alternative≤${L}`, ...stats(mem, cfg.measure), changed: a.changed, gain: a.gain ?? 0 });
+        if (!a.changed) break;
+      }
+    }
+  }
   // curriculumul pe niveluri (D17): întâi propozițiile (nivelurile ≤ 3), apoi conceptele din ele, apoi restul
   if (cfg.concepts && cfg.conceptsFirst) {
     for (let i = 0; i < max; i++) {
