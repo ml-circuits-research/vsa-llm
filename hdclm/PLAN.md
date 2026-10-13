@@ -8,6 +8,8 @@ Drumul, din specificație (secțiunea 19): blocul A (mecanismul, pe text generat
 
 ## Unde suntem
 
+> **Actualizare:** starea de acum, cum se rulează și pașii următori sunt în `README.md` din rădăcina depozitului. Planul de acum e cel din `ALGORITM.md` (§9). Textul de mai jos e planul inițial, păstrat pentru istoric.
+
 Etapele 1 și 2 încheiate: cu biți, interpretări multiple și grupare abstractă, A1–A6 trec pe trei semințe; A7 trece până la 1–3 propoziții. Sistemul găsește singur regulile generale din specificație (R din secțiunea 3, regula cu doi pași din G8). Urmează etapa 3 (blocul A consemnat), apoi 4 (deplasarea, pentru A7).
 
 Decizie luată: **biții hotărăsc ce se învață; termenii rămân limită (K termeni pe ecuație)**.
