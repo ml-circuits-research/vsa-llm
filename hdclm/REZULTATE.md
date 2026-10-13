@@ -337,3 +337,27 @@ Pe GBLIND, sămânța 1: QA pe testul obișnuit a urcat de la 17% la 39–56%, i
 - capcane contopite 0%.
 
 **Așteptare declarată dinainte:** pe GBLIND, GF dă doar 24% pe poveștile puse deoparte, deci probabil pică. Contează cât câștigă GF față de G0, adică dacă reparațiile sunt generale și nu potrivite pe GBLIND.
+
+## Testul de decizie pe GBLIND2: rezultate (rulat o singură dată)
+
+| Configurare | Sămânța | Reformulări cu aceeași ecuație | Capcane contopite | QA puse deoparte | Clase |
+|---|---|---|---|---|---|
+| G0 implicit | 1 | 1% (134) | 0% (118) | 6% (54) | 0 |
+| G0 implicit | 2 | 0% (128) | 0% (101) | 9% (53) | 0 |
+| G0 implicit | 3 | 3% (144) | 0% (96) | 11% (53) | 0 |
+| GF tot | 1 | **100%** | 0% | 31% | 5 |
+| GF tot | 2 | 65% | **50%** | 13% | 5 |
+| GF tot | 3 | 58% | **38%** | 21% | 5 |
+
+**Concluzie preînregistrată: GF pică.** QA e sub 70% pe toate semințele, iar capcanele se contopesc pe semințele 2 și 3.
+
+**Ce s-a generalizat totuși** (față de G0, pe date nevăzute):
+- Unificarea reformulărilor: 1–3% → 58–100%.
+- Clasele găsite: THING = {wields, snatched, keeps}; cele două formulări ale aceleiași întrebări într-o clasă; PLACE cu forma rară, pe sămânța 1.
+- Inducția respinge corect „painted” pentru THING.
+
+**Diagnostic** (după rulare; GBLIND2 devine set văzut):
+- Contopirea PLACE + {is leaving, dreams of} pornește dintr-o coloană cu doar 2 rânduri ({dreams of, rests in}).
+- Apoi se înlănțuie prin refolosire: criteriul măsura formele comune față de mulțimea mai mică, deci o singură formă comună ajungea ({a,b} + {b,c} + …).
+- Clasa amestecată face regulile ambigue. De exemplu, „două fapte despre x, răspunsul e al doilea” se potrivește și când al doilea e capcana.
+- Reparația propusă: D24, refolosirea după Jaccard (pe reuniune).
